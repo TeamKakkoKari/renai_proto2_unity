@@ -1,0 +1,55 @@
+{
+ "comment": "ステージ追加はここに1件足し、characters.jsonでそのstage_idを指定するだけです。",
+ "stages": [
+  {
+   "color": "#2d5a3d",
+   "description": "静かな古い森。木漏れ日と鳥の歌に満ちている。",
+   "icon": "🌲",
+   "id": "forest",
+   "name": "エルフの森林",
+   "race": "エルフ",
+   "bg": "#a9c79b",
+   "ground": "#5d8152"
+  },
+  {
+   "color": "#5a4632",
+   "description": "鍛冶場の火と鉱石の輝き。槌の音が響く地下都市。",
+   "icon": "⛏️",
+   "id": "mine",
+   "name": "ドワーフの鉱山",
+   "race": "ドワーフ",
+   "bg": "#cdb59b",
+   "ground": "#6f5942"
+  },
+  {
+   "color": "#8a6d2f",
+   "description": "広い草原と強い風。狩りと冒険の大地。",
+   "icon": "🦁",
+   "id": "savanna",
+   "name": "獣人のサバンナ",
+   "race": "獣人",
+   "bg": "#eedca6",
+   "ground": "#a8894f"
+  },
+  {
+   "color": "#3d4a6b",
+   "description": "店と本と文化が集まる、にぎやかな街。",
+   "icon": "🏙️",
+   "id": "city",
+   "name": "人間の都会",
+   "race": "人間",
+   "bg": "#bdd4ec",
+   "ground": "#7d8aa0"
+  },
+  {
+   "color": "#4a2d6b",
+   "description": "光るキノコと不思議な現象が起こる小さな森。",
+   "icon": "✨",
+   "id": "mystic_forest",
+   "name": "小人の神秘的な森",
+   "race": "小人",
+   "bg": "#d6c4ea",
+   "ground": "#7a639e"
+  }
+ ]
+}
