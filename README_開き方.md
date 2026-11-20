@@ -7,16 +7,34 @@ Godot版「プロトタイプ2 v9」をUnityで開いて作業できるように
 
 このプロジェクトは GitHub リポジトリ（TeamKakkoKari/renai_proto2_unity、プライベート）で管理されています。開発側の更新はすべてここへ随時 push されるので、zip を受け取る必要はありません。
 
-**初回のみ**
-1. GitHub Desktop をインストールし、TeamKakkoKari アカウントでサインイン
-2. 「Clone a repository」からこのリポジトリを選び、好きなフォルダに複製（クローン）
-3. Unity Hub の「プロジェクトを開く」で、そのフォルダを選択（初回は Library の自動生成で数分かかります）
+**初回のみ（詳しい手順）**
+
+A. GitHub Desktop の準備
+1. desktop.github.com から GitHub Desktop をダウンロードしてインストール
+2. 起動したら「Sign in to GitHub.com」を選び、TeamKakkoKari のアカウントでサインイン（このリポジトリはプライベートなので、サインインしないと見えません）
+
+B. リポジトリをクローン（複製）する
+1. メニューの「File」→「Clone repository...」を開く
+2. 「GitHub.com」タブで `TeamKakkoKari/renai_proto2_unity` を選択
+3. 「Local path」に保存先フォルダを指定（例: ドキュメント\GitHub\renai_proto2_unity）
+4. 「Clone」を押す（数十秒〜数分でダウンロード完了）
+   ※ ブラウザでリポジトリページを開き、緑の「Code」→「Open with GitHub Desktop」でも同じことができます
+
+C. Unity で開く
+1. Unity Hub を開く（無ければ unity.com からインストール）
+2. 「Open」の横の ▽ →「Add project from disk」で、クローンしたフォルダ（Assets や ProjectSettings が入っているフォルダそのもの）を選択
+3. 推奨バージョンは **Unity 2022.3 LTS**。入っていない場合は Hub の「Installs」→「Install Editor」から 2022.3.x を追加してください（違うバージョンでも開けますが初回に変換が入ります）
+4. プロジェクトを開く（初回は Library の自動生成で数分かかります）
+5. 下部の Project ウィンドウで `Assets/Scenes/Main.unity` をダブルクリックしてシーンを開き、画面上部中央の ▶（再生）ボタンで実行
+6. Game ビューの比率は 16:9（または 1280×720）にすると想定通りのレイアウトになります
 
 **更新を受け取るとき（2回目以降）**
-1. Unity を開く前に、GitHub Desktop で「Fetch」→「Pull origin」を押す
-2. あとはいつも通り Unity Hub で開くだけ（変更分は自動で読み直されます）
+1. Unity の再生を止めておく
+2. GitHub Desktop で左上の「Current Repository」が renai_proto2_unity になっていることを確認し、上部の「Fetch origin」を押す
+3. 新しい更新があるとボタンが「Pull origin」に変わるので、それを押す
+4. あとはいつも通り Unity Hub で開くだけ（変更分は自動で読み直されます）。左側の「History」タブで v14 などの版数も確認できます
 
-※ こちら側でファイルを編集・保存していると Pull が止まることがあります。その場合は GitHub Desktop で変更を右クリック→「Discard changes（変更を破棄）」してから Pull してください。基本は開いて再生するだけの使い方が安全です。
+※ こちら側でファイルを編集・保存していると Pull が止まることがあります。その場合は「Changes」タブでファイルを右クリック→「Discard Changes...（変更を破棄）」してから Pull してください。Unity のバージョン違いで ProjectVersion.txt が書き換わった場合も同じ操作で戻せます。基本は開いて再生するだけの使い方が安全です。
 
 ## 開き方（zipで受け取った場合）
 
