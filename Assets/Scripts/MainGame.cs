@@ -127,7 +127,7 @@ public class MainGame : MonoBehaviour
         root.offsetMin = Vector2.zero;
         root.offsetMax = Vector2.zero;
 
-        jpFont = Resources.Load<Font>("fonts/MPLUSRounded1c-Regular");
+        jpFont = Resources.Load<Font>("fonts/MPLUSRounded1c-Bold");
         LoadData();
         LoadAffection();
         BuildUi();
@@ -306,6 +306,22 @@ public class MainGame : MonoBehaviour
         t.resizeTextMaxSize = maxSize;
     }
 
+    // 文字の縁取り（背景が写真・イラストでも読みやすくする）
+    private void AddOutline(Text t, Color c, float d)
+    {
+        var o = t.gameObject.AddComponent<Outline>();
+        o.effectColor = c;
+        o.effectDistance = new Vector2(d, -d);
+    }
+
+    // 文字の影（立体感と視認性の補助）
+    private void AddShadowFx(Text t, Color c, float d)
+    {
+        var s = t.gameObject.AddComponent<Shadow>();
+        s.effectColor = c;
+        s.effectDistance = new Vector2(d, -d);
+    }
+
     private Image MkPanel(Transform parent, Color color, float x, float y, float w, float h)
     {
         var go = NewObj(parent, "Panel");
@@ -422,13 +438,15 @@ public class MainGame : MonoBehaviour
 
         // 上部: 浮いたピル型ステータス表示（参考画像風）
         var top = NewObj(root, "TopBar").transform;
-        MkButton(top, "🗺 マップ", 15, 16, 8, 120, 40, ShowMap);
-        var titleLbl = MkLabel(top, "ことばを紡ぐ恋愛シミュレーション", 15, new Color(1, 1, 1, 0.75f), 148, 15, 420, 22);
+        MkButton(top, "🗺 マップ", 16, 16, 8, 120, 40, ShowMap);
+        var titleLbl = MkLabel(top, "ことばを紡ぐ恋愛シミュレーション", 16, new Color(1, 1, 1, 0.85f), 148, 15, 420, 22);
         titleLbl.raycastTarget = false;
+        AddOutline(titleLbl, new Color(0, 0, 0, 0.55f), 1.5f);
         var affPill = MkPanel(top, new Color(0.08f, 0.08f, 0.14f, 0.78f), 588, 8, 240, 40);
         affPill.raycastTarget = false;
-        affectionLabel = MkLabel(top, "", 15, new Color(1f, 0.88f, 0.92f), 598, 12, 220, 20);
+        affectionLabel = MkLabel(top, "", 16, new Color(1f, 0.88f, 0.92f), 598, 12, 220, 20);
         affectionLabel.raycastTarget = false;
+        AddOutline(affectionLabel, new Color(0, 0, 0, 0.45f), 1f);
         var affBarBg = MkRect(top, new Color(0, 0, 0, 0.45f), 598, 34, 220, 6);
         affBarBg.raycastTarget = false;
         var affFill = MkRect(top, new Color(0.45f, 0.9f, 0.55f), 598, 34, 220, 6);
@@ -436,14 +454,15 @@ public class MainGame : MonoBehaviour
         affFillRt = affFill.rectTransform;
         var funPill = MkPanel(top, new Color(0.08f, 0.08f, 0.14f, 0.78f), 836, 8, 240, 40);
         funPill.raycastTarget = false;
-        funLabel = MkLabel(top, "", 15, new Color(1f, 0.92f, 0.65f), 846, 12, 220, 20);
+        funLabel = MkLabel(top, "", 16, new Color(1f, 0.92f, 0.65f), 846, 12, 220, 20);
         funLabel.raycastTarget = false;
+        AddOutline(funLabel, new Color(0, 0, 0, 0.45f), 1f);
         var funBarBg = MkRect(top, new Color(0, 0, 0, 0.45f), 846, 34, 220, 6);
         funBarBg.raycastTarget = false;
         var funFill = MkRect(top, new Color(1f, 0.75f, 0.3f), 846, 34, 220, 6);
         funFill.raycastTarget = false;
         funFillRt = funFill.rectTransform;
-        MkButton(top, "📖 思い出", 14, 1084, 8, 96, 40, ToggleBacklog);
+        MkButton(top, "📖 思い出", 15, 1084, 8, 96, 40, ToggleBacklog);
 
         BuildTimerBar();
         BuildFrame();
@@ -456,7 +475,8 @@ public class MainGame : MonoBehaviour
     private void BuildTimerBar()
     {
         // 制限時間バーは単語パレットの真上に置く
-        timerLabel = MkLabel(root, "", 15, new Color(1f, 0.95f, 0.85f), 16, 408, 300, 22, TextAnchor.UpperLeft);
+        timerLabel = MkLabel(root, "", 16, new Color(1f, 0.95f, 0.85f), 16, 408, 300, 22, TextAnchor.UpperLeft);
+        AddOutline(timerLabel, new Color(0, 0, 0, 0.55f), 1.5f);
         timerBg = MkRect(root, new Color(0.05f, 0.05f, 0.1f, 0.75f), 16, 434, 944, 10);
         timerBg.raycastTarget = false;
         var fill = MkRect(root, new Color(0.45f, 0.9f, 0.5f), 16, 434, 944, 10);
@@ -472,17 +492,17 @@ public class MainGame : MonoBehaviour
         var card = MkPanel(root, new Color(0.98f, 0.96f, 0.90f, 0.97f), 976, 448, 288, 256);
         card.raycastTarget = false;
         var ct = card.transform;
-        var title = MkLabel(ct, "✨ 今回の評価 ✨", 16, new Color(0.35f, 0.28f, 0.15f), 0, 10, 288, 24, TextAnchor.MiddleCenter);
+        var title = MkLabel(ct, "✨ 今回の評価 ✨", 17, new Color(0.35f, 0.28f, 0.15f), 0, 10, 288, 24, TextAnchor.MiddleCenter);
         title.raycastTarget = false;
-        evalAffLabel = MkLabel(ct, "♥ 好感度　―", 16, new Color(0.30f, 0.22f, 0.18f), 16, 42, 256, 24);
-        evalFunLabel = MkLabel(ct, "😊 面白さ　―", 16, new Color(0.30f, 0.22f, 0.18f), 16, 70, 256, 24);
-        evalTrustLabel = MkLabel(ct, "🤝 信頼度　―", 16, new Color(0.30f, 0.22f, 0.18f), 16, 98, 256, 24);
+        evalAffLabel = MkLabel(ct, "♥ 好感度　―", 18, new Color(0.30f, 0.22f, 0.18f), 16, 42, 256, 24);
+        evalFunLabel = MkLabel(ct, "😊 面白さ　―", 18, new Color(0.30f, 0.22f, 0.18f), 16, 70, 256, 24);
+        evalTrustLabel = MkLabel(ct, "🤝 信頼度　―", 18, new Color(0.30f, 0.22f, 0.18f), 16, 98, 256, 24);
         var miniGo = NewObj(ct, "EvalMini");
         SetRect(miniGo.GetComponent<RectTransform>(), 16, 130, 76, 112);
         evalMini = miniGo.AddComponent<RawImage>();
         evalMini.raycastTarget = false;
-        resultLabel = MkLabel(ct, "", 12, new Color(0.32f, 0.28f, 0.22f), 104, 130, 168, 112);
-        FitText(resultLabel, 9, 12);
+        resultLabel = MkLabel(ct, "", 13, new Color(0.32f, 0.28f, 0.22f), 104, 130, 168, 112);
+        FitText(resultLabel, 10, 13);
     }
 
     private void SetTimerVisible(bool v)
@@ -503,12 +523,13 @@ public class MainGame : MonoBehaviour
         // 左上の吹き出し
         var bubble = MkPanel(pt, new Color(0.98f, 0.96f, 0.90f, 0.97f), 16, 92, 344, 196);
         bubble.raycastTarget = false;
-        nameLabel = MkLabel(pt, "", 21, new Color(0.25f, 0.45f, 0.25f), 32, 102, 312, 28);
-        personalityLabel = MkLabel(pt, "", 12, new Color(0.5f, 0.45f, 0.38f), 32, 132, 312, 18);
-        FitText(personalityLabel, 9, 12);
-        dialogueLabel = MkLabel(pt, "", 19, new Color(0.22f, 0.18f, 0.14f), 32, 154, 312, 92);
-        FitText(dialogueLabel, 12, 19);
-        nextButton = MkButton(pt, "つぎへ ▼", 15, 216, 240, 128, 36, OnNext);
+        nameLabel = MkLabel(pt, "", 23, new Color(0.25f, 0.45f, 0.25f), 32, 102, 312, 28);
+        personalityLabel = MkLabel(pt, "", 13, new Color(0.5f, 0.45f, 0.38f), 32, 132, 312, 18);
+        FitText(personalityLabel, 10, 13);
+        dialogueLabel = MkLabel(pt, "", 22, new Color(0.22f, 0.18f, 0.14f), 32, 154, 312, 92);
+        FitText(dialogueLabel, 13, 22);
+        AddShadowFx(dialogueLabel, new Color(0, 0, 0, 0.15f), 1f);
+        nextButton = MkButton(pt, "つぎへ ▼", 16, 216, 240, 128, 36, OnNext);
 
         // 選択欄: 右の発言パネル＋下の単語パレット（参考画像の構成）
         askGroup = NewObj(pt, "AskGroup");
@@ -516,23 +537,24 @@ public class MainGame : MonoBehaviour
         var at = askGroup.transform;
         var sayPanel = MkPanel(at, new Color(0.10f, 0.11f, 0.18f, 0.96f), 800, 92, 464, 340);
         sayPanel.raycastTarget = false;
-        MkLabel(at, "✏ あなたの発言", 14, new Color(0.75f, 0.8f, 0.95f), 820, 106, 300, 20);
+        MkLabel(at, "✏ あなたの発言", 15, new Color(0.75f, 0.8f, 0.95f), 820, 106, 300, 20);
         chipsGroup = SetRect(NewObj(at, "Chips").GetComponent<RectTransform>(), 820, 134, 424, 74);
-        MkButton(at, "◀", 14, 820, 216, 40, 30, () => MoveChip(-1));
-        MkButton(at, "▶", 14, 864, 216, 40, 30, () => MoveChip(1));
-        MkButton(at, "削除", 14, 908, 216, 64, 30, DeleteChip);
-        MkButton(at, "↩ 一つ戻す", 13, 976, 216, 118, 30, UndoLast);
-        MkButton(at, "全解除", 14, 1098, 216, 146, 30, ClearSelected);
-        sentenceLabel = MkLabel(at, "（まだ何も選んでいません）", 20, new Color(0.9f, 0.97f, 1f), 820, 254, 424, 30);
-        FitText(sentenceLabel, 12, 20);
-        speakButton = MkButton(at, "✨ 発言する ▶", 22, 820, 296, 424, 54, () => DoSpeak(false));
+        MkButton(at, "◀", 15, 820, 216, 40, 30, () => MoveChip(-1));
+        MkButton(at, "▶", 15, 864, 216, 40, 30, () => MoveChip(1));
+        MkButton(at, "削除", 15, 908, 216, 64, 30, DeleteChip);
+        MkButton(at, "↩ 一つ戻す", 14, 976, 216, 118, 30, UndoLast);
+        MkButton(at, "全解除", 15, 1098, 216, 146, 30, ClearSelected);
+        sentenceLabel = MkLabel(at, "（まだ何も選んでいません）", 22, new Color(0.9f, 0.97f, 1f), 820, 252, 424, 34);
+        FitText(sentenceLabel, 13, 22);
+        AddOutline(sentenceLabel, new Color(0, 0, 0, 0.5f), 1f);
+        speakButton = MkButton(at, "✨ 発言する ▶", 24, 820, 296, 424, 54, () => DoSpeak(false));
         speakButton.GetComponent<Image>().color = new Color(0.32f, 0.58f, 0.34f);
         var palPanel = MkPanel(at, new Color(0.98f, 0.96f, 0.90f, 0.97f), 16, 448, 944, 256);
         palPanel.raycastTarget = false;
         tabsArea = SetRect(NewObj(at, "Tabs").GetComponent<RectTransform>(), 32, 462, 690, 30);
         BuildSearchField(at, 734, 462, 210, 30);
         paletteArea = SetRect(NewObj(at, "Palette").GetComponent<RectTransform>(), 32, 502, 912, 158);
-        var hint = MkLabel(at, "ⓘ 単語を選んで、自由に文章を作りましょう！", 12, new Color(0.5f, 0.46f, 0.4f), 32, 672, 700, 20);
+        var hint = MkLabel(at, "ⓘ 単語を選んで、自由に文章を作りましょう！", 13, new Color(0.5f, 0.46f, 0.4f), 32, 672, 700, 20);
         hint.raycastTarget = false;
         askGroup.SetActive(false);
     }
@@ -546,9 +568,9 @@ public class MainGame : MonoBehaviour
         img.type = Image.Type.Sliced;
         img.color = new Color(1f, 1f, 1f, 0.95f);
         var field = go.AddComponent<InputField>();
-        var textComp = MkLabel(go.transform, "", 14, new Color(0.25f, 0.22f, 0.18f), 10, 0, w - 16, h, TextAnchor.MiddleLeft);
+        var textComp = MkLabel(go.transform, "", 15, new Color(0.25f, 0.22f, 0.18f), 10, 0, w - 16, h, TextAnchor.MiddleLeft);
         textComp.supportRichText = false;
-        var ph = MkLabel(go.transform, "🔍 キーワードで検索", 13, new Color(0.55f, 0.52f, 0.48f), 10, 0, w - 16, h, TextAnchor.MiddleLeft);
+        var ph = MkLabel(go.transform, "🔍 キーワードで検索", 14, new Color(0.55f, 0.52f, 0.48f), 10, 0, w - 16, h, TextAnchor.MiddleLeft);
         field.textComponent = textComp;
         field.placeholder = ph;
         field.onValueChanged.AddListener((string s) => { searchText = s; RenderPaletteGrid(); });
@@ -611,7 +633,7 @@ public class MainGame : MonoBehaviour
     {
         backlog.Add(new string[] { speaker, text });
         string shown = (speaker != "" ? speaker + ": " : "") + text;
-        var l = MkLabel(backlogContent, shown, 15, new Color(0.9f, 0.92f, 1f), 0, 0, 1220, 24);
+        var l = MkLabel(backlogContent, shown, 16, new Color(0.9f, 0.92f, 1f), 0, 0, 1220, 26);
         var fitter = l.gameObject.AddComponent<ContentSizeFitter>();
         fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         var le = l.gameObject.AddComponent<LayoutElement>();
@@ -650,7 +672,7 @@ public class MainGame : MonoBehaviour
         MkLabel(pt, "〜 プロトタイプ2 〜　5つの地域で、ことばを組み合わせて物語を紡ごう", 20, new Color(0.9f, 0.93f, 1f), 0, 300, 1280, 30, TextAnchor.MiddleCenter);
         MkButton(pt, "▶ ゲームスタート", 26, 480, 356, 320, 64, ShowMap);
         MkButton(pt, "おわる", 16, 560, 436, 160, 40, () => Application.Quit());
-        MkLabel(pt, "Prototype 2 v14 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, TextAnchor.UpperRight);
+        MkLabel(pt, "Prototype 2 v15 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, TextAnchor.UpperRight);
     }
 
     private Dictionary<string, object> CharForStage(string stageId)
@@ -1105,8 +1127,8 @@ public class MainGame : MonoBehaviour
         foreach (var def in tabDefs)
         {
             string catId = def.Key;
-            float tw = def.Value.Length * 17f + 26f;
-            var tab = MkButton(tabsArea, def.Value, 14, x, 0, tw, 30, () =>
+            float tw = def.Value.Length * 18f + 28f;
+            var tab = MkButton(tabsArea, def.Value, 15, x, 0, tw, 30, () =>
             {
                 activeCategory = catId;
                 RefreshTabs();
@@ -1190,7 +1212,7 @@ public class MainGame : MonoBehaviour
             if (!catColors.TryGetValue(J.GetStr(w, "category"), out hex)) hex = "#ffffff";
             Color col = Color.Lerp(HexColor(hex, Color.white), Color.white, 0.3f);
             var token = w;
-            var b = MkButton(paletteArea, text, 17, 0, 0, 60, 34, () => AddWord(token));
+            var b = MkButton(paletteArea, text, 19, 0, 0, 60, 34, () => AddWord(token));
             var label = b.GetComponentInChildren<Text>();
             label.color = col;
             float bw = Mathf.Min(cellW - 8f, Mathf.Max(label.preferredWidth + 42f, text.Length * 15f + 42f));
@@ -1204,7 +1226,7 @@ public class MainGame : MonoBehaviour
             // 右端の星でお気に入りに登録/解除
             bool fav = favoriteWords.Contains(text);
             string wordText = text;
-            var star = MkButton(b.transform, fav ? "★" : "☆", 13, bw - 27, (bh - 26f) / 2f, 25, 26, () => ToggleFavorite(wordText));
+            var star = MkButton(b.transform, fav ? "★" : "☆", 14, bw - 27, (bh - 26f) / 2f, 25, 26, () => ToggleFavorite(wordText));
             star.GetComponent<Image>().color = new Color(0, 0, 0, 0);
             var sl = star.GetComponentInChildren<Text>();
             if (sl != null) sl.color = fav ? new Color(1f, 0.85f, 0.3f) : new Color(0.6f, 0.62f, 0.7f);
@@ -1249,7 +1271,7 @@ public class MainGame : MonoBehaviour
             parts.Add(text);
             int idx = i;
             // カード本体を押すと選択（◀▶で並べ替え）、右端の × で削除
-            var chip = MkButton(chipsGroup, text, 15, x, y, 60, 30, () => { selectedChip = idx; RefreshSentence(); });
+            var chip = MkButton(chipsGroup, text, 16, x, y, 60, 30, () => { selectedChip = idx; RefreshSentence(); });
             var label = chip.GetComponentInChildren<Text>();
             float cw = Mathf.Max(label.preferredWidth + 38f, text.Length * 14f + 38f);
             var rt = chip.GetComponent<RectTransform>();
@@ -1260,7 +1282,7 @@ public class MainGame : MonoBehaviour
                 var img = chip.GetComponent<Image>();
                 if (img != null) img.color = new Color(0.36f, 0.42f, 0.62f, 1f);
             }
-            var del = MkButton(chip.transform, "×", 13, cw - 27, 2, 25, 26, () =>
+            var del = MkButton(chip.transform, "×", 14, cw - 27, 2, 25, 26, () =>
             {
                 selected.RemoveAt(idx);
                 if (selectedChip >= selected.Count) selectedChip = selected.Count - 1;
