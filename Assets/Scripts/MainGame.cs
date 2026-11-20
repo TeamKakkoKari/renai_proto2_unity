@@ -24,7 +24,6 @@ public class MainGame : MonoBehaviour
     private Dictionary<string, object> currentStage = new Dictionary<string, object>();
     private Dictionary<string, int> affection = new Dictionary<string, int>();
     private List<Dictionary<string, object>> selected = new List<Dictionary<string, object>>();
-    private int selectedChip = -1;
     private int turnCount = 0;
     private List<object> beats = new List<object>();
     private int storyPos = 0;
@@ -59,7 +58,12 @@ public class MainGame : MonoBehaviour
     private Image timerFill;
     private Text sentenceLabel;
     private RectTransform chipsGroup;
-    private RectTransform scatterArea;
+    private RectTransform tabsArea;
+    private RectTransform paletteArea;
+    private string activeCategory = "";
+    private readonly Dictionary<string, List<Dictionary<string, object>>> paletteGroups =
+        new Dictionary<string, List<Dictionary<string, object>>>();
+    private readonly List<KeyValuePair<string, Button>> tabButtons = new List<KeyValuePair<string, Button>>();
     private Text resultLabel;
     private Button speakButton;
     private GameObject backlogPanel;
@@ -398,13 +402,10 @@ public class MainGame : MonoBehaviour
         var at = askGroup.transform;
         sentenceLabel = MkLabel(at, "（まだ何も選んでいません）", 21, new Color(0.9f, 0.97f, 1f), 16, 100, 990, 36);
         speakButton = MkButton(at, "💬 発言する", 21, 1022, 98, 210, 42, () => DoSpeak(false));
-        chipsGroup = SetRect(NewObj(at, "Chips").GetComponent<RectTransform>(), 16, 142, 1216, 38);
-        MkButton(at, "◀ 左へ", 14, 16, 184, 84, 30, () => MoveChip(-1));
-        MkButton(at, "右へ ▶", 14, 106, 184, 84, 30, () => MoveChip(1));
-        MkButton(at, "削除", 14, 196, 184, 70, 30, DeleteChip);
-        MkButton(at, "全解除", 14, 272, 184, 84, 30, ClearSelected);
-        MkLabel(at, "↓ 散らばった単語を押して文章を作ろう (カテゴリ色つき)", 13, new Color(0.8f, 0.82f, 0.95f), 366, 188, 700, 24);
-        scatterArea = SetRect(NewObj(at, "Scatter").GetComponent<RectTransform>(), 16, 220, 1216, 140);
+        chipsGroup = SetRect(NewObj(at, "Chips").GetComponent<RectTransform>(), 16, 142, 1040, 38);
+        MkButton(at, "全解除", 14, 1072, 146, 160, 30, ClearSelected);
+        tabsArea = SetRect(NewObj(at, "Tabs").GetComponent<RectTransform>(), 16, 186, 1216, 32);
+        paletteArea = SetRect(NewObj(at, "Palette").GetComponent<RectTransform>(), 16, 224, 1216, 132);
         resultLabel = MkLabel(at, "", 13, new Color(0.85f, 0.9f, 1f), 16, 364, 1216, 36);
         askGroup.SetActive(false);
     }
@@ -555,7 +556,7 @@ public class MainGame : MonoBehaviour
         MkLabel(pt, "〜 プロトタイプ2 〜　5つの地域で、ことばを組み合わせて物語を紡ごう", 20, new Color(0.9f, 0.93f, 1f), 0, 300, 1280, 30, TextAnchor.MiddleCenter);
         MkButton(pt, "▶ ゲームスタート", 26, 480, 356, 320, 64, ShowMap);
         MkButton(pt, "おわる", 16, 560, 436, 160, 40, () => Application.Quit());
-        MkLabel(pt, "Prototype 2 v10 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, TextAnchor.UpperRight);
+        MkLabel(pt, "Prototype 2 v11 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, TextAnchor.UpperRight);
     }
 
     private Dictionary<string, object> CharForStage(string stageId)
@@ -632,7 +633,6 @@ public class MainGame : MonoBehaviour
         foreach (var c in characters)
             if (J.GetStr(c, "stage_id") == stageId) currentChar = c;
         selected.Clear();
-        selectedChip = -1;
         bgSky.color = HexColor(J.GetStr(currentStage, "bg"), Color.white);
         bgGround.color = HexColor(J.GetStr(currentStage, "ground"), Color.white);
         string p = J.GetStr(currentChar, "portrait");
@@ -840,7 +840,6 @@ public class MainGame : MonoBehaviour
     private void OnTimeout()
     {
         selected.Clear();
-        selectedChip = -1;
         RefreshSentence();
         DoSpeak(true);
     }
@@ -869,10 +868,10 @@ public class MainGame : MonoBehaviour
         ShowDialogue("「" + J.GetStr(q, "text") + "」", J.GetStr(currentChar, "name"));
         nextButton.gameObject.SetActive(false);
         speakButton.interactable = true;
-        resultLabel.text = "制限時間内に、散らばった単語から文章を作って発言してください。時間切れは無言 (-10) です。";
+        resultLabel.text = "カテゴリーから単語を選んで文章を作り、発言してください。選んだ単語のカードを押すと取り消せます。時間切れは無言 (-10) です。";
         timeLeft = timeLimit;
         UpdateTimerUi();
-        ScatterWords(OfferedWords(activeQuestion));
+        BuildPalette(OfferedWords(activeQuestion));
         RefreshSentence();
     }
 
@@ -920,65 +919,123 @@ public class MainGame : MonoBehaviour
         }
     }
 
-    private void ScatterWords(Dictionary<string, Dictionary<string, object>> offered)
+    // v11: 単語は散らばさず、カテゴリー別タブ＋整列グリッドで提示する
+    private void BuildPalette(Dictionary<string, Dictionary<string, object>> offered)
     {
-        for (int i = scatterArea.childCount - 1; i >= 0; i--)
-            Destroy(scatterArea.GetChild(i).gameObject);
-        var items = new List<Dictionary<string, object>>(offered.Values);
-        Shuffle(items);
-        float areaW = 1216f, areaH = 140f;
-        int n = items.Count;
-        int cols = n <= 24 ? 8 : (n <= 40 ? 10 : 12);
-        int rows = Mathf.Max(1, Mathf.CeilToInt(n / (float)cols));
-        float cellW = areaW / cols;
-        float cellH = areaH / rows;
+        paletteGroups.Clear();
+        foreach (var w in offered.Values)
+        {
+            string cat = J.GetStr(w, "category");
+            List<Dictionary<string, object>> list;
+            if (!paletteGroups.TryGetValue(cat, out list))
+            {
+                list = new List<Dictionary<string, object>>();
+                paletteGroups[cat] = list;
+            }
+            list.Add(w);
+        }
+        // タブは words.json の categories の順に並べる
+        var catOrder = new List<string>();
+        var catLabels = new Dictionary<string, string>();
+        foreach (var co in J.GetList(dataWords, "categories"))
+        {
+            var c = J.Dict(co);
+            string id = J.GetStr(c, "id");
+            catOrder.Add(id);
+            catLabels[id] = J.GetStr(c, "label", id);
+        }
+        foreach (var cat in paletteGroups.Keys)
+            if (!catOrder.Contains(cat)) catOrder.Add(cat);
+
+        for (int i = tabsArea.childCount - 1; i >= 0; i--)
+            Destroy(tabsArea.GetChild(i).gameObject);
+        tabButtons.Clear();
+        float x = 0f;
+        string firstCat = "";
+        foreach (var cat in catOrder)
+        {
+            List<Dictionary<string, object>> list;
+            if (!paletteGroups.TryGetValue(cat, out list) || list.Count == 0) continue;
+            if (firstCat == "") firstCat = cat;
+            string catId = cat;
+            string label;
+            if (!catLabels.TryGetValue(cat, out label)) label = cat;
+            float tw = label.Length * 17f + 26f;
+            var tab = MkButton(tabsArea, label, 14, x, 0, tw, 32, () =>
+            {
+                activeCategory = catId;
+                RefreshTabs();
+                RenderPaletteGrid();
+            });
+            tabButtons.Add(new KeyValuePair<string, Button>(catId, tab));
+            x += tw + 6f;
+        }
+        if (activeCategory == "" || !paletteGroups.ContainsKey(activeCategory))
+            activeCategory = firstCat;
+        RefreshTabs();
+        RenderPaletteGrid();
+    }
+
+    private void RefreshTabs()
+    {
+        foreach (var kv in tabButtons)
+        {
+            var img = kv.Value.GetComponent<Image>();
+            if (img == null) continue;
+            img.color = kv.Key == activeCategory
+                ? new Color(0.36f, 0.42f, 0.62f, 1f)
+                : new Color(0.16f, 0.17f, 0.26f, 1f);
+        }
+    }
+
+    private void RenderPaletteGrid()
+    {
+        for (int i = paletteArea.childCount - 1; i >= 0; i--)
+            Destroy(paletteArea.GetChild(i).gameObject);
+        List<Dictionary<string, object>> items;
+        if (!paletteGroups.TryGetValue(activeCategory, out items)) return;
         var catColors = new Dictionary<string, string>();
         foreach (var co in J.GetList(dataWords, "categories"))
         {
             var c = J.Dict(co);
             catColors[J.GetStr(c, "id")] = J.GetStr(c, "color", "#ffffff");
         }
-        var cells = new List<int>();
-        for (int i = 0; i < n; i++) cells.Add(i);
-        Shuffle(cells);
+        string hex;
+        if (!catColors.TryGetValue(activeCategory, out hex)) hex = "#ffffff";
+        Color col = Color.Lerp(HexColor(hex, Color.white), Color.white, 0.3f);
+        int n = items.Count;
+        int cols = n <= 4 ? Math.Max(1, n) : (n <= 8 ? 4 : (n <= 12 ? 6 : 8));
+        int rows = Mathf.Max(1, Mathf.CeilToInt(n / (float)cols));
+        float cellW = 1216f / cols;
+        float cellH = Mathf.Min(44f, 132f / rows);
         for (int idx = 0; idx < n; idx++)
         {
             var w = items[idx];
-            int cell = cells[idx];
-            float cx = (cell % cols) * cellW;
-            float cy = (cell / cols) * cellH;
             string text = J.GetStr(w, "text");
-            string hex;
-            if (!catColors.TryGetValue(J.GetStr(w, "category"), out hex)) hex = "#ffffff";
-            Color col = Color.Lerp(HexColor(hex, Color.white), Color.white, 0.3f);
             var token = w;
-            var b = MkButton(scatterArea, text, 17, 0, 0, 60, 34, () => AddWord(token));
+            var b = MkButton(paletteArea, text, 17, 0, 0, 60, 34, () => AddWord(token));
             var label = b.GetComponentInChildren<Text>();
             label.color = col;
-            float bw = Mathf.Max(label.preferredWidth + 18f, text.Length * 15f + 18f);
-            float bh = 34f;
+            float bw = Mathf.Min(cellW - 8f, Mathf.Max(label.preferredWidth + 18f, text.Length * 15f + 18f));
             var rt = b.GetComponent<RectTransform>();
-            rt.sizeDelta = new Vector2(bw, bh);
-            label.rectTransform.sizeDelta = new Vector2(bw, bh);
-            float jx = (float)rng.NextDouble() * Mathf.Max(0f, cellW - bw - 4f);
-            float jy = (float)rng.NextDouble() * Mathf.Max(0f, cellH - bh - 4f);
+            rt.sizeDelta = new Vector2(bw, 34f);
+            label.rectTransform.sizeDelta = new Vector2(bw, 34f);
+            float cx = (idx % cols) * cellW + (cellW - bw) / 2f;
+            float cy = (idx / cols) * cellH + (cellH - 34f) / 2f;
             rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = new Vector2(cx + jx + bw / 2f, -(cy + jy + bh / 2f));
-            rt.localEulerAngles = new Vector3(0, 0, (float)(rng.NextDouble() * 14.0 - 7.0));
+            rt.anchoredPosition = new Vector2(cx + bw / 2f, -(cy + 17f));
         }
     }
 
     private void AddWord(Dictionary<string, object> token)
     {
         selected.Add(new Dictionary<string, object>(token));
-        selectedChip = selected.Count - 1;
         RefreshSentence();
     }
 
     private void ClearSelected()
     {
         selected.Clear();
-        selectedChip = -1;
         RefreshSentence();
     }
 
@@ -998,41 +1055,22 @@ public class MainGame : MonoBehaviour
             string text = J.GetStr(selected[i], "text");
             parts.Add(text);
             int idx = i;
-            string chipText = (i == selectedChip ? "▶" : "") + text;
-            var chip = MkButton(chipsGroup, chipText, 15, x, y, 60, 30, () => { selectedChip = idx; RefreshSentence(); });
+            string chipText = text + " ×";
+            // カードを押すと、その言葉を取り消せる
+            var chip = MkButton(chipsGroup, chipText, 15, x, y, 60, 30, () => { selected.RemoveAt(idx); RefreshSentence(); });
             var label = chip.GetComponentInChildren<Text>();
             float cw = Mathf.Max(label.preferredWidth + 14f, chipText.Length * 14f + 14f);
             var rt = chip.GetComponent<RectTransform>();
             rt.sizeDelta = new Vector2(cw, 30);
             label.rectTransform.sizeDelta = new Vector2(cw, 30);
             x += cw + 4f;
-            if (x > 1216f && i + 1 < selected.Count)
+            if (x > 1040f && i + 1 < selected.Count)
             {
                 x = 0f;
                 y += 34f;
             }
         }
         sentenceLabel.text = "「" + string.Join("", parts) + "」";
-    }
-
-    private void MoveChip(int dir)
-    {
-        if (selectedChip < 0) return;
-        int j = selectedChip + dir;
-        if (j < 0 || j >= selected.Count) return;
-        var tmp = selected[selectedChip];
-        selected[selectedChip] = selected[j];
-        selected[j] = tmp;
-        selectedChip = j;
-        RefreshSentence();
-    }
-
-    private void DeleteChip()
-    {
-        if (selectedChip < 0 || selectedChip >= selected.Count) return;
-        selected.RemoveAt(selectedChip);
-        selectedChip = Math.Min(selectedChip, selected.Count - 1);
-        RefreshSentence();
     }
 
     private void DoSpeak(bool isTimeout)
@@ -1094,7 +1132,6 @@ public class MainGame : MonoBehaviour
         personalityLabel.text = head;
         LogLine("評価", head + " " + string.Join(" ", rparts) + " ｜ 解析: " + ana.Summary());
         selected.Clear();
-        selectedChip = -1;
         speakButton.interactable = false;
         nextButton.gameObject.SetActive(true);
         PortraitReact(delta);
