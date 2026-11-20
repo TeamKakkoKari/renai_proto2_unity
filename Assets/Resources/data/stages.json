@@ -9,7 +9,8 @@
    "name": "エルフの森林",
    "race": "エルフ",
    "bg": "#a9c79b",
-   "ground": "#5d8152"
+   "ground": "#5d8152",
+   "bg_image": "res://assets/bg_forest.png"
   },
   {
    "color": "#5a4632",
