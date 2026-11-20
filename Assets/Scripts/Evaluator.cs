@@ -9,7 +9,11 @@ using System.Collections.Generic;
 // returns: {score, reasons(List<string>), polarity, scene_change, confused, violations, offtopic, minimal}
 public static class Evaluator
 {
-    private static readonly List<string> Particles = new List<string> { "は", "を", "と" };
+    // v10: 助詞を基本セット（は/が/を/に/へ/で/と/も/の/から/まで/や）に拡張
+    private static readonly List<string> Particles = new List<string>
+    {
+        "は", "が", "を", "に", "へ", "で", "と", "も", "の", "から", "まで", "や"
+    };
 
     // どの話題でも自然に使える汎用タグ（話題逸脱の判定から除外する）
     private static readonly List<string> TopicGeneric = new List<string>
@@ -143,8 +147,18 @@ public static class Evaluator
         var violations = new List<string>();
 
         // 語順: 標準順に対する逆転を数える
+        // v10: 名詞に付いた助詞の直後の名詞は新しい句の始まりとして扱い、逆転に数えない
+        //      （「あなたにリンゴをあげる」のような複数句の文を許容する。
+        //        文頭など名詞に付いていない助詞の直後は対象外）
+        var particleAttached = new bool[tokens.Count];
+        for (int i = 0; i < tokens.Count; i++)
+        {
+            particleAttached[i] = cats[i] == "connect" && Particles.Contains(texts[i])
+                && i > 0 && cats[i - 1] == "target";
+        }
         int prevRank = -1;
         string prevCat = "";
+        int prevIdx = -1;
         for (int i = 0; i < tokens.Count; i++)
         {
             int r = Rank(tokens[i]);
@@ -152,11 +166,15 @@ public static class Evaluator
             if (prevRank >= 0 && r < prevRank)
             {
                 // 感情→対象 の隣接は「綺麗な森」のような形容として許容する
-                if (!(prevCat == "emotion" && cats[i] == "target"))
+                bool adjectival = prevCat == "emotion" && cats[i] == "target";
+                // 助詞→名詞 は句の切り替わり（「〜にリンゴ」「〜の森」など）
+                bool phraseReset = cats[i] == "target" && prevIdx >= 0 && particleAttached[prevIdx];
+                if (!adjectival && !phraseReset)
                     violations.Add("「" + texts[i] + "」の位置が不自然");
             }
             prevRank = r;
             prevCat = cats[i];
+            prevIdx = i;
         }
 
         // 語尾の位置と重なり

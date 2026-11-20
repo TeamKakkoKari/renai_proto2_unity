@@ -1,58 +1,63 @@
 {
- "affection_levels": [
-  {
-   "min": -999,
-   "name": "警戒",
-   "note": "まだ心を開いていない"
+  "affection_levels": [
+    {
+      "min": -999,
+      "name": "警戒",
+      "note": "まだ心を開いていない"
+    },
+    {
+      "min": 0,
+      "name": "知り合い",
+      "note": "普通に話せる関係"
+    },
+    {
+      "min": 20,
+      "name": "友達",
+      "note": "特別な話題が解放される"
+    },
+    {
+      "min": 50,
+      "name": "親しい",
+      "note": "反応が甘くなる"
+    },
+    {
+      "min": 80,
+      "name": "恋人候補",
+      "note": "攻略ルート終盤"
+    }
+  ],
+  "comment": "好感度は単語そのものより組み合わせ方（語順・文法・助詞）で決まります。増減値はすべてここで変更できます。",
+  "scores": {
+    "broken_penalty": -3,
+    "degree_emotion_bonus": 1,
+    "direct_dislike_you": -15,
+    "disliked_topic_per_word": -5,
+    "empty_penalty": -10,
+    "grammar_ending_bonus": 2,
+    "grammar_structure_bonus": 3,
+    "hollow_penalty": -6,
+    "incomplete_penalty": -3,
+    "liked_topic_cap": 6,
+    "liked_topic_per_word": 3,
+    "minimal_any": 0,
+    "minimal_match": 2,
+    "minimal_mismatch": -4,
+    "nonsense_penalty": -10,
+    "offtopic_per_word": -2,
+    "personality_ending_match": 2,
+    "personality_ending_mismatch": 0,
+    "polarity_match": 5,
+    "polarity_match_broken": 1,
+    "polarity_match_flawed": 3,
+    "polarity_mismatch": -5,
+    "together_bonus": 5,
+    "scene_change_bonus": 2,
+    "violation_penalty": -2,
+    "interp_like_bonus": 2,
+    "partner_bonus": 2,
+    "question_bonus": 1,
+    "absurd_penalty": -1,
+    "dislike_interp_penalty": -2
   },
-  {
-   "min": 0,
-   "name": "知り合い",
-   "note": "普通に話せる関係"
-  },
-  {
-   "min": 20,
-   "name": "友達",
-   "note": "特別な話題が解放される"
-  },
-  {
-   "min": 50,
-   "name": "親しい",
-   "note": "反応が甘くなる"
-  },
-  {
-   "min": 80,
-   "name": "恋人候補",
-   "note": "攻略ルート終盤"
-  }
- ],
- "comment": "好感度は単語そのものより組み合わせ方（語順・文法・助詞）で決まります。増減値はすべてここで変更できます。",
- "scores": {
-  "broken_penalty": -3,
-  "degree_emotion_bonus": 1,
-  "direct_dislike_you": -15,
-  "disliked_topic_per_word": -5,
-  "empty_penalty": -10,
-  "grammar_ending_bonus": 2,
-  "grammar_structure_bonus": 3,
-  "hollow_penalty": -6,
-  "incomplete_penalty": -3,
-  "liked_topic_cap": 6,
-  "liked_topic_per_word": 3,
-  "minimal_any": 0,
-  "minimal_match": 2,
-  "minimal_mismatch": -4,
-  "nonsense_penalty": -10,
-  "offtopic_per_word": -2,
-  "personality_ending_match": 2,
-  "personality_ending_mismatch": 0,
-  "polarity_match": 5,
-  "polarity_match_broken": 1,
-  "polarity_match_flawed": 3,
-  "polarity_mismatch": -5,
-  "together_bonus": 5,
-  "scene_change_bonus": 2,
-  "violation_penalty": -2
- },
- "time_limit_seconds": 60
+  "time_limit_seconds": 60
 }

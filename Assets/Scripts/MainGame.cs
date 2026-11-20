@@ -555,7 +555,7 @@ public class MainGame : MonoBehaviour
         MkLabel(pt, "〜 プロトタイプ2 〜　5つの地域で、ことばを組み合わせて物語を紡ごう", 20, new Color(0.9f, 0.93f, 1f), 0, 300, 1280, 30, TextAnchor.MiddleCenter);
         MkButton(pt, "▶ ゲームスタート", 26, 480, 356, 320, 64, ShowMap);
         MkButton(pt, "おわる", 16, 560, 436, 160, 40, () => Application.Quit());
-        MkLabel(pt, "Prototype 2 v9 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, TextAnchor.UpperRight);
+        MkLabel(pt, "Prototype 2 v10 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, TextAnchor.UpperRight);
     }
 
     private Dictionary<string, object> CharForStage(string stageId)
@@ -898,6 +898,7 @@ public class MainGame : MonoBehaviour
             {
                 string tg = J.Str(tag);
                 if (wantTags.Contains(tg) || tg == "turn") hit = true;
+                if (tg == "particle") hit = true; // 助詞はいつでも使えるように提示する
             }
             if (hit) offered[text] = w;
             else quirky.Add(w);
@@ -927,7 +928,7 @@ public class MainGame : MonoBehaviour
         Shuffle(items);
         float areaW = 1216f, areaH = 140f;
         int n = items.Count;
-        int cols = 8;
+        int cols = n <= 24 ? 8 : (n <= 40 ? 10 : 12);
         int rows = Mathf.Max(1, Mathf.CeilToInt(n / (float)cols));
         float cellW = areaW / cols;
         float cellH = areaH / rows;
@@ -1041,8 +1042,11 @@ public class MainGame : MonoBehaviour
         var ptexts = new List<string>();
         foreach (var tk in selected) ptexts.Add(J.GetStr(tk, "text"));
         LogLine("あなた", ptexts.Count > 0 ? "「" + string.Join("", ptexts) + "」" : "（無言）");
-        int delta = J.GetInt(res, "score");
         string cid = J.GetStr(currentChar, "id");
+        // v10: 助詞による文章解析（関係・解釈・理解度）。好感度とは独立に判定し、
+        // 補正は解釈の内容に対してのみ小さく加える
+        var ana = SentenceAnalyzer.Analyze(selected, currentChar, activeQuestion, evalCfg, AffectionOf(cid), res);
+        int delta = J.GetInt(res, "score") + ana.modifier;
         affection[cid] = Mathf.Clamp(AffectionOf(cid) + delta, -20, 100);
         SaveAffection();
         turnCount++;
@@ -1051,8 +1055,18 @@ public class MainGame : MonoBehaviour
         bool confused = J.GetBool(res, "confused");
         bool offtopic = J.GetBool(res, "offtopic");
         bool minimal = J.GetBool(res, "minimal");
-        if (confused || offtopic) SetExpression("neutral");
-        else if (minimal) SetExpression("sad");
+        // 反応の優先順位: 崩れた文 → 現実には難しい関係（笑い） → 聞き返し →
+        // 話題逸脱（質問の形のときは通常反応） → 一言返事 → 好感度段位
+        string rkey = key;
+        if (confused) rkey = "confused";
+        else if (ana.absurd) rkey = "absurd";
+        else if (ana.clarify) rkey = "clarify";
+        else if (offtopic && !ana.questionForm) rkey = "offtopic";
+        else if (minimal) rkey = "minimal";
+        // 表情は反応キーに連動させる
+        if (rkey == "confused" || rkey == "offtopic" || rkey == "clarify") SetExpression("neutral");
+        else if (rkey == "absurd") SetExpression("joy");
+        else if (rkey == "minimal") SetExpression("sad");
         else
         {
             string expr = "default";
@@ -1062,10 +1076,6 @@ public class MainGame : MonoBehaviour
             else if (key == "terrible") expr = "angry";
             SetExpression(expr);
         }
-        string rkey = key;
-        if (confused) rkey = "confused";
-        else if (offtopic) rkey = "offtopic";
-        else if (minimal) rkey = "minimal";
         var reactions = J.GetList(J.GetDict(currentChar, "reactions"), rkey);
         string reaction = reactions.Count > 0 ? J.Str(reactions[turnCount % reactions.Count], "……") : "……";
         ShowStoryBox();
@@ -1082,7 +1092,7 @@ public class MainGame : MonoBehaviour
             head += " / 転換の言葉で次の話題が変わりそうだ";
         }
         personalityLabel.text = head;
-        LogLine("評価", head + " " + string.Join(" ", rparts));
+        LogLine("評価", head + " " + string.Join(" ", rparts) + " ｜ 解析: " + ana.Summary());
         selected.Clear();
         selectedChip = -1;
         speakButton.interactable = false;

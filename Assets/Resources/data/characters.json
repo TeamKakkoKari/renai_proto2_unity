@@ -1,563 +1,603 @@
 {
- "characters": [
-  {
-   "disliked_words": [
-    "嫌い",
-    "酒"
-   ],
-   "id": "elf_lilia",
-   "liked_tags": [
-    "nature",
-    "forest",
-    "plant",
-    "beauty"
-   ],
-   "liked_words": [
-    "森",
-    "花",
-    "植物",
-    "綺麗",
-    "歌"
-   ],
-   "name": "リーリア",
-   "personality": "穏やかで礼儀正しい。丁寧な語尾（です／ます）を好む。",
-   "preferred_endings": [
-    "です",
-    "ます",
-    "ですね"
-   ],
-   "questions": [
+  "characters": [
     {
-     "expected_polarity": "positive",
-     "text": "はじめまして。わたしはリーリア。この森は好きですか？",
-     "topic_tags": [
-      "nature",
-      "forest"
-     ]
+      "disliked_words": [
+        "嫌い",
+        "酒"
+      ],
+      "id": "elf_lilia",
+      "liked_tags": [
+        "nature",
+        "forest",
+        "plant",
+        "beauty"
+      ],
+      "liked_words": [
+        "森",
+        "花",
+        "植物",
+        "綺麗",
+        "歌"
+      ],
+      "name": "リーリア",
+      "personality": "穏やかで礼儀正しい。丁寧な語尾（です／ます）を好む。",
+      "preferred_endings": [
+        "です",
+        "ます",
+        "ですね"
+      ],
+      "questions": [
+        {
+          "expected_polarity": "positive",
+          "text": "はじめまして。わたしはリーリア。この森は好きですか？",
+          "topic_tags": [
+            "nature",
+            "forest"
+          ]
+        },
+        {
+          "expected_polarity": "any",
+          "text": "森の花が咲きました。どう思いますか？",
+          "topic_tags": [
+            "nature",
+            "plant",
+            "beauty"
+          ]
+        },
+        {
+          "expected_polarity": "positive",
+          "text": "一緒に森を見に行きませんか？",
+          "topic_tags": [
+            "nature",
+            "forest"
+          ]
+        },
+        {
+          "expected_polarity": "any",
+          "min_affection": 20,
+          "text": "（友達だけに）古い歌を歌いますね。聞いてくれますか？",
+          "topic_tags": [
+            "culture",
+            "nature"
+          ]
+        }
+      ],
+      "race": "エルフ",
+      "reactions": {
+        "bad": [
+          "……そうですか。",
+          "少し、残念です。"
+        ],
+        "good": [
+          "ありがとう。嬉しいです。",
+          "ふふ、その言葉、好きです。"
+        ],
+        "great": [
+          "まあ……！とても嬉しいです！",
+          "あなたと話すと、森が明るく感じます。"
+        ],
+        "terrible": [
+          "……あなたに、そんなことを言われるなんて。"
+        ],
+        "confused": [
+          "ごめんなさい、よく分からなくて……",
+          "えっと……どういう意味ですか？"
+        ],
+        "offtopic": [
+          "あの……今は、そのお話ではないのですが……",
+          "えっと、話題が変わってしまいましたね"
+        ],
+        "minimal": [
+          "そうですか……もう少し、あなたの気持ちを聞きたいです",
+          "それだけですか？ 少し寂しいです"
+        ],
+        "clarify": [
+          "ごめんなさい、どういう意味かしら…？もう少しだけ、ことばを足してくれる？",
+          "えっと…わたしのこと？それとも、わたしが何か…？"
+        ],
+        "absurd": [
+          "ふふ、りんごと結婚…？森の精霊も驚くお話ですね",
+          "あらあら、それは不思議なお願い…でも、なんだか面白いです"
+        ]
+      },
+      "stage_id": "forest",
+      "portrait": "res://assets/lilia.png",
+      "expressions": {
+        "angry": "res://assets/lilia_angry.png",
+        "cry": "res://assets/lilia_cry.png",
+        "fun": "res://assets/lilia_fun.png",
+        "joy": "res://assets/lilia_joy.png",
+        "neutral": "res://assets/lilia_neutral.png",
+        "sad": "res://assets/lilia_sad.png"
+      },
+      "accent": "#4e9a51",
+      "turn_questions": [
+        {
+          "text": "ところで……泉の水の音、聞こえますか？ 静かで綺麗ですよね",
+          "expected_polarity": "any",
+          "topic_tags": [
+            "nature",
+            "beauty"
+          ]
+        },
+        {
+          "text": "実は、内緒の花畑があるんです。見たいですか？",
+          "expected_polarity": "positive",
+          "topic_tags": [
+            "nature",
+            "plant"
+          ]
+        }
+      ]
     },
     {
-     "expected_polarity": "any",
-     "text": "森の花が咲きました。どう思いますか？",
-     "topic_tags": [
-      "nature",
-      "plant",
-      "beauty"
-     ]
+      "disliked_words": [
+        "嫌い"
+      ],
+      "id": "dwarf_grim",
+      "liked_tags": [
+        "ore",
+        "mining",
+        "smithing",
+        "tech",
+        "drink"
+      ],
+      "liked_words": [
+        "鉱石",
+        "鍛冶",
+        "技術",
+        "酒",
+        "珍しい石"
+      ],
+      "name": "グリム",
+      "personality": "豪快で職人気質。くだけた語尾（だよ）を好む。技術と鉱石の話に目がない。",
+      "preferred_endings": [
+        "だよ"
+      ],
+      "questions": [
+        {
+          "expected_polarity": "positive",
+          "text": "おう、よく来たな！鉱石は好きか？",
+          "topic_tags": [
+            "ore",
+            "mining"
+          ]
+        },
+        {
+          "expected_polarity": "any",
+          "text": "新しい鍛冶の技術を試したんだ。どう思う？",
+          "topic_tags": [
+            "smithing",
+            "tech"
+          ]
+        },
+        {
+          "expected_polarity": "positive",
+          "text": "一緒に酒を飲みたいか？",
+          "topic_tags": [
+            "drink"
+          ]
+        },
+        {
+          "expected_polarity": "any",
+          "min_affection": 20,
+          "text": "（友達だけに）珍しい石を見つけた。見たいか？",
+          "topic_tags": [
+            "rare",
+            "ore"
+          ]
+        }
+      ],
+      "race": "ドワーフ",
+      "reactions": {
+        "bad": [
+          "むっ……そうか。",
+          "職人をなめるなよ。"
+        ],
+        "good": [
+          "おう、わかってるじゃないか！",
+          "いいねえ、その調子だ！"
+        ],
+        "great": [
+          "がはは！最高だ、お前とは気が合う！",
+          "よし、今度一緒に作ろうぜ！"
+        ],
+        "terrible": [
+          "……出直してこい。"
+        ],
+        "confused": [
+          "なんだって？ 言葉がバラバラだぞ。",
+          "わけがわからん。落ち着いて言ってくれ。"
+        ],
+        "offtopic": [
+          "おい、今の話と関係ねえぞ",
+          "話が飛んでるぞ。落ち着けって"
+        ],
+        "minimal": [
+          "返事だけか。もっと気持ちを言えよ",
+          "素っ気ないなあ。言いたいことがあるだろ"
+        ],
+        "clarify": [
+          "ん？どういう意味だ。もっとはっきり言ってくれ",
+          "言葉が足りねえな。何が言いたいんだ？"
+        ],
+        "absurd": [
+          "はっはっは！りんごと結婚だと？面白い冗談だ！",
+          "おいおい、酒の飲みすぎか？…まあ、笑わせてもらった"
+        ]
+      },
+      "stage_id": "mine",
+      "portrait": "res://assets/grim.png",
+      "accent": "#b0722a",
+      "turn_questions": [
+        {
+          "text": "ところでよ、洞窟の奥に眠る鉱脈の噂、聞きたいか？",
+          "expected_polarity": "any",
+          "topic_tags": [
+            "mining",
+            "ore",
+            "adventure"
+          ]
+        },
+        {
+          "text": "実は新作の道具が完成したんだ。手伝ってくれるか？",
+          "expected_polarity": "positive",
+          "topic_tags": [
+            "smithing",
+            "tech"
+          ]
+        }
+      ]
     },
     {
-     "expected_polarity": "positive",
-     "text": "一緒に森を見に行きませんか？",
-     "topic_tags": [
-      "nature",
-      "forest"
-     ]
+      "disliked_words": [
+        "嫌い"
+      ],
+      "id": "beast_leo",
+      "liked_tags": [
+        "adventure",
+        "hunting",
+        "exercise",
+        "food"
+      ],
+      "liked_words": [
+        "冒険",
+        "狩猟",
+        "運動",
+        "肉"
+      ],
+      "name": "レオ",
+      "personality": "元気でまっすぐ。くだけた語尾（だよ）を好む。冒険と狩りの話が大好き。",
+      "preferred_endings": [
+        "だよ"
+      ],
+      "questions": [
+        {
+          "expected_polarity": "positive",
+          "text": "よっ！冒険は好きか！？",
+          "topic_tags": [
+            "adventure"
+          ]
+        },
+        {
+          "expected_polarity": "any",
+          "text": "今日の狩猟、どうだったと思う？",
+          "topic_tags": [
+            "hunting"
+          ]
+        },
+        {
+          "expected_polarity": "positive",
+          "text": "一緒に狩りに行きたいか？",
+          "topic_tags": [
+            "hunting",
+            "adventure"
+          ]
+        },
+        {
+          "expected_polarity": "any",
+          "min_affection": 20,
+          "text": "（友達だけに）サバンナの星は見たことあるか？",
+          "topic_tags": [
+            "nature"
+          ]
+        }
+      ],
+      "race": "獣人",
+      "reactions": {
+        "bad": [
+          "えー、つまんないなあ。",
+          "がっかりだぜ……。"
+        ],
+        "good": [
+          "だよな！楽しいよな！",
+          "お前、話がわかるな！"
+        ],
+        "great": [
+          "最高だ！！一緒に冒険しようぜ！",
+          "お前と狩りに行くの、楽しみだ！"
+        ],
+        "terrible": [
+          "……お前なんか、知らない。"
+        ],
+        "confused": [
+          "え？ なに言ってるか分かんねー！",
+          "言葉がぐちゃぐちゃだぞ？"
+        ],
+        "offtopic": [
+          "え、今それ関係あるか？",
+          "おーい、話がどっか行ってるぞ！"
+        ],
+        "minimal": [
+          "それだけかよ！ もっと話そうぜ！",
+          "一言だけじゃつまんないなあ"
+        ],
+        "clarify": [
+          "んん？どういうことだ？もっと聞かせてくれ！",
+          "お前の言葉、まだよく分からねえ。もう一度だ！"
+        ],
+        "absurd": [
+          "がはは！りんごと結婚かよ！お前、面白いな！",
+          "りんごは食うもんだろ…でも、その発想は嫌いじゃねえ"
+        ]
+      },
+      "stage_id": "savanna",
+      "portrait": "res://assets/leo.png",
+      "accent": "#cf9a26",
+      "turn_questions": [
+        {
+          "text": "ところで！ 遺跡まで競争しないか！？",
+          "expected_polarity": "any",
+          "topic_tags": [
+            "adventure",
+            "exercise"
+          ]
+        },
+        {
+          "text": "実は泳ぎも得意なんだ！ 泉で泳ぎたいか？",
+          "expected_polarity": "positive",
+          "topic_tags": [
+            "exercise",
+            "nature"
+          ]
+        }
+      ]
     },
     {
-     "expected_polarity": "any",
-     "min_affection": 20,
-     "text": "（友達だけに）古い歌を歌いますね。聞いてくれますか？",
-     "topic_tags": [
-      "culture",
-      "nature"
-     ]
+      "disliked_words": [
+        "嫌い"
+      ],
+      "id": "human_yui",
+      "liked_tags": [
+        "culture",
+        "shopping",
+        "daily",
+        "cooking",
+        "food"
+      ],
+      "liked_words": [
+        "買い物",
+        "本",
+        "文化",
+        "料理"
+      ],
+      "name": "ユイ",
+      "personality": "明るい都会っ子。丁寧な語尾（です／ます）を好む。文化と買い物と料理が好き。",
+      "preferred_endings": [
+        "です",
+        "ます",
+        "ですね"
+      ],
+      "questions": [
+        {
+          "expected_polarity": "positive",
+          "text": "こんにちは！買い物は好きですか？",
+          "topic_tags": [
+            "shopping"
+          ]
+        },
+        {
+          "expected_polarity": "any",
+          "text": "昨日作った料理、どう思いますか？",
+          "topic_tags": [
+            "cooking",
+            "food"
+          ]
+        },
+        {
+          "expected_polarity": "positive",
+          "text": "一緒に本を読みませんか？",
+          "topic_tags": [
+            "culture"
+          ]
+        },
+        {
+          "expected_polarity": "any",
+          "min_affection": 20,
+          "text": "（友達だけに）新しい文化祭の話、聞きたいですか？",
+          "topic_tags": [
+            "culture"
+          ]
+        }
+      ],
+      "race": "人間",
+      "reactions": {
+        "bad": [
+          "え……そうなんだ。",
+          "ちょっと悲しいな。"
+        ],
+        "good": [
+          "ありがとう、嬉しい！",
+          "気が合いますね！"
+        ],
+        "great": [
+          "わあ、すごく嬉しいです！",
+          "あなたと出かけるの、楽しみです！"
+        ],
+        "terrible": [
+          "……もう話しかけないでください。"
+        ],
+        "confused": [
+          "ごめん、ちょっと分からなかった……",
+          "えっと、もう一度ゆっくり言ってくれる？"
+        ],
+        "offtopic": [
+          "あれ、今の話と違うような……",
+          "ごめん、話が急に変わってついていけない"
+        ],
+        "minimal": [
+          "それだけ……？ もう少し教えてほしいな",
+          "うーん、気持ちが見えなくて寂しいかも"
+        ],
+        "clarify": [
+          "え、どういう意味？もうちょっと詳しく聞いていい？",
+          "ごめん、今のちょっと分からなかった…言い換えてみて？"
+        ],
+        "absurd": [
+          "り、りんごと結婚！？…斬新すぎて笑っちゃった",
+          "それはさすがに無理だけど、発想は面白いと思う"
+        ]
+      },
+      "stage_id": "city",
+      "portrait": "res://assets/yui.png",
+      "accent": "#4a7fb5",
+      "turn_questions": [
+        {
+          "text": "ところで、今度お祭りがあるんです！ 一緒に行きたいですか？",
+          "expected_polarity": "any",
+          "topic_tags": [
+            "culture",
+            "daily"
+          ]
+        },
+        {
+          "text": "実はダンスの練習をしてるんです。見てくれますか？",
+          "expected_polarity": "positive",
+          "topic_tags": [
+            "culture",
+            "exercise"
+          ]
+        }
+      ]
+    },
+    {
+      "disliked_words": [
+        "嫌い"
+      ],
+      "id": "tiny_pipi",
+      "liked_tags": [
+        "magic",
+        "mystery",
+        "rare",
+        "nature"
+      ],
+      "liked_words": [
+        "魔法",
+        "星",
+        "珍しい石",
+        "不思議"
+      ],
+      "name": "ピピ",
+      "personality": "好奇心いっぱいの小人。「なの」という語尾を好む。魔法と不思議な現象が大好き。",
+      "preferred_endings": [
+        "なの",
+        "だよ"
+      ],
+      "questions": [
+        {
+          "expected_polarity": "positive",
+          "text": "ねえねえ！魔法は好き？",
+          "topic_tags": [
+            "magic"
+          ]
+        },
+        {
+          "expected_polarity": "any",
+          "text": "昨日の不思議な光、見た？",
+          "topic_tags": [
+            "mystery",
+            "magic"
+          ]
+        },
+        {
+          "expected_polarity": "positive",
+          "text": "一緒に星を見たい？",
+          "topic_tags": [
+            "nature",
+            "mystery"
+          ]
+        },
+        {
+          "expected_polarity": "any",
+          "min_affection": 20,
+          "text": "（友達だけに）珍しい石の秘密、知りたい？",
+          "topic_tags": [
+            "rare",
+            "mystery"
+          ]
+        }
+      ],
+      "race": "小人",
+      "reactions": {
+        "bad": [
+          "えー……つまらないの。",
+          "しょんぼりなの……。"
+        ],
+        "good": [
+          "わあい！嬉しいの！",
+          "きらきらした気持ちなの！"
+        ],
+        "great": [
+          "すごいすごい！大好きなの！",
+          "あなたは特別なの！"
+        ],
+        "terrible": [
+          "……ぴぴ、悲しいの。"
+        ],
+        "confused": [
+          "なになに？ ことばがバラバラなの。",
+          "ぴぴ、わからなかったの……"
+        ],
+        "offtopic": [
+          "あれれ？ お話が飛んじゃったの",
+          "今はその話じゃないの"
+        ],
+        "minimal": [
+          "それだけなの？ もっとお話したいの",
+          "ぴぴ、もっと聞きたいの！"
+        ],
+        "clarify": [
+          "ええと、どういうこと？ピピにはむずかしいよ〜",
+          "んー？もう少しくわしく教えてほしいな"
+        ],
+        "absurd": [
+          "きゃはは！りんごとけっこん？おもしろ〜い！",
+          "りんごさんと結婚式？ピピ、およばれしたいな♪"
+        ]
+      },
+      "stage_id": "mystic_forest",
+      "portrait": "res://assets/pipi.png",
+      "accent": "#8e6cc8",
+      "turn_questions": [
+        {
+          "text": "ところで！ 洞窟の奥で光る石、見たことある？",
+          "expected_polarity": "any",
+          "topic_tags": [
+            "mystery",
+            "rare",
+            "ore"
+          ]
+        },
+        {
+          "text": "実はね、温泉が湧く場所を知ってるの！ 行きたい？",
+          "expected_polarity": "positive",
+          "topic_tags": [
+            "nature",
+            "mystery"
+          ]
+        }
+      ]
     }
-   ],
-   "race": "エルフ",
-   "reactions": {
-    "bad": [
-     "……そうですか。",
-     "少し、残念です。"
-    ],
-    "good": [
-     "ありがとう。嬉しいです。",
-     "ふふ、その言葉、好きです。"
-    ],
-    "great": [
-     "まあ……！とても嬉しいです！",
-     "あなたと話すと、森が明るく感じます。"
-    ],
-    "terrible": [
-     "……あなたに、そんなことを言われるなんて。"
-    ],
-    "confused": [
-     "ごめんなさい、よく分からなくて……",
-     "えっと……どういう意味ですか？"
-    ],
-    "offtopic": [
-     "あの……今は、そのお話ではないのですが……",
-     "えっと、話題が変わってしまいましたね"
-    ],
-    "minimal": [
-     "そうですか……もう少し、あなたの気持ちを聞きたいです",
-     "それだけですか？ 少し寂しいです"
-    ]
-   },
-   "stage_id": "forest",
-   "portrait": "res://assets/lilia.png",
-   "expressions": {
-    "angry": "res://assets/lilia_angry.png",
-    "cry": "res://assets/lilia_cry.png",
-    "fun": "res://assets/lilia_fun.png",
-    "joy": "res://assets/lilia_joy.png",
-    "neutral": "res://assets/lilia_neutral.png",
-    "sad": "res://assets/lilia_sad.png"
-   },
-   "accent": "#4e9a51",
-   "turn_questions": [
-    {
-     "text": "ところで……泉の水の音、聞こえますか？ 静かで綺麗ですよね",
-     "expected_polarity": "any",
-     "topic_tags": [
-      "nature",
-      "beauty"
-     ]
-    },
-    {
-     "text": "実は、内緒の花畑があるんです。見たいですか？",
-     "expected_polarity": "positive",
-     "topic_tags": [
-      "nature",
-      "plant"
-     ]
-    }
-   ]
-  },
-  {
-   "disliked_words": [
-    "嫌い"
-   ],
-   "id": "dwarf_grim",
-   "liked_tags": [
-    "ore",
-    "mining",
-    "smithing",
-    "tech",
-    "drink"
-   ],
-   "liked_words": [
-    "鉱石",
-    "鍛冶",
-    "技術",
-    "酒",
-    "珍しい石"
-   ],
-   "name": "グリム",
-   "personality": "豪快で職人気質。くだけた語尾（だよ）を好む。技術と鉱石の話に目がない。",
-   "preferred_endings": [
-    "だよ"
-   ],
-   "questions": [
-    {
-     "expected_polarity": "positive",
-     "text": "おう、よく来たな！鉱石は好きか？",
-     "topic_tags": [
-      "ore",
-      "mining"
-     ]
-    },
-    {
-     "expected_polarity": "any",
-     "text": "新しい鍛冶の技術を試したんだ。どう思う？",
-     "topic_tags": [
-      "smithing",
-      "tech"
-     ]
-    },
-    {
-     "expected_polarity": "positive",
-     "text": "一緒に酒を飲みたいか？",
-     "topic_tags": [
-      "drink"
-     ]
-    },
-    {
-     "expected_polarity": "any",
-     "min_affection": 20,
-     "text": "（友達だけに）珍しい石を見つけた。見たいか？",
-     "topic_tags": [
-      "rare",
-      "ore"
-     ]
-    }
-   ],
-   "race": "ドワーフ",
-   "reactions": {
-    "bad": [
-     "むっ……そうか。",
-     "職人をなめるなよ。"
-    ],
-    "good": [
-     "おう、わかってるじゃないか！",
-     "いいねえ、その調子だ！"
-    ],
-    "great": [
-     "がはは！最高だ、お前とは気が合う！",
-     "よし、今度一緒に作ろうぜ！"
-    ],
-    "terrible": [
-     "……出直してこい。"
-    ],
-    "confused": [
-     "なんだって？ 言葉がバラバラだぞ。",
-     "わけがわからん。落ち着いて言ってくれ。"
-    ],
-    "offtopic": [
-     "おい、今の話と関係ねえぞ",
-     "話が飛んでるぞ。落ち着けって"
-    ],
-    "minimal": [
-     "返事だけか。もっと気持ちを言えよ",
-     "素っ気ないなあ。言いたいことがあるだろ"
-    ]
-   },
-   "stage_id": "mine",
-   "portrait": "res://assets/grim.png",
-   "accent": "#b0722a",
-   "turn_questions": [
-    {
-     "text": "ところでよ、洞窟の奥に眠る鉱脈の噂、聞きたいか？",
-     "expected_polarity": "any",
-     "topic_tags": [
-      "mining",
-      "ore",
-      "adventure"
-     ]
-    },
-    {
-     "text": "実は新作の道具が完成したんだ。手伝ってくれるか？",
-     "expected_polarity": "positive",
-     "topic_tags": [
-      "smithing",
-      "tech"
-     ]
-    }
-   ]
-  },
-  {
-   "disliked_words": [
-    "嫌い"
-   ],
-   "id": "beast_leo",
-   "liked_tags": [
-    "adventure",
-    "hunting",
-    "exercise",
-    "food"
-   ],
-   "liked_words": [
-    "冒険",
-    "狩猟",
-    "運動",
-    "肉"
-   ],
-   "name": "レオ",
-   "personality": "元気でまっすぐ。くだけた語尾（だよ）を好む。冒険と狩りの話が大好き。",
-   "preferred_endings": [
-    "だよ"
-   ],
-   "questions": [
-    {
-     "expected_polarity": "positive",
-     "text": "よっ！冒険は好きか！？",
-     "topic_tags": [
-      "adventure"
-     ]
-    },
-    {
-     "expected_polarity": "any",
-     "text": "今日の狩猟、どうだったと思う？",
-     "topic_tags": [
-      "hunting"
-     ]
-    },
-    {
-     "expected_polarity": "positive",
-     "text": "一緒に狩りに行きたいか？",
-     "topic_tags": [
-      "hunting",
-      "adventure"
-     ]
-    },
-    {
-     "expected_polarity": "any",
-     "min_affection": 20,
-     "text": "（友達だけに）サバンナの星は見たことあるか？",
-     "topic_tags": [
-      "nature"
-     ]
-    }
-   ],
-   "race": "獣人",
-   "reactions": {
-    "bad": [
-     "えー、つまんないなあ。",
-     "がっかりだぜ……。"
-    ],
-    "good": [
-     "だよな！楽しいよな！",
-     "お前、話がわかるな！"
-    ],
-    "great": [
-     "最高だ！！一緒に冒険しようぜ！",
-     "お前と狩りに行くの、楽しみだ！"
-    ],
-    "terrible": [
-     "……お前なんか、知らない。"
-    ],
-    "confused": [
-     "え？ なに言ってるか分かんねー！",
-     "言葉がぐちゃぐちゃだぞ？"
-    ],
-    "offtopic": [
-     "え、今それ関係あるか？",
-     "おーい、話がどっか行ってるぞ！"
-    ],
-    "minimal": [
-     "それだけかよ！ もっと話そうぜ！",
-     "一言だけじゃつまんないなあ"
-    ]
-   },
-   "stage_id": "savanna",
-   "portrait": "res://assets/leo.png",
-   "accent": "#cf9a26",
-   "turn_questions": [
-    {
-     "text": "ところで！ 遺跡まで競争しないか！？",
-     "expected_polarity": "any",
-     "topic_tags": [
-      "adventure",
-      "exercise"
-     ]
-    },
-    {
-     "text": "実は泳ぎも得意なんだ！ 泉で泳ぎたいか？",
-     "expected_polarity": "positive",
-     "topic_tags": [
-      "exercise",
-      "nature"
-     ]
-    }
-   ]
-  },
-  {
-   "disliked_words": [
-    "嫌い"
-   ],
-   "id": "human_yui",
-   "liked_tags": [
-    "culture",
-    "shopping",
-    "daily",
-    "cooking",
-    "food"
-   ],
-   "liked_words": [
-    "買い物",
-    "本",
-    "文化",
-    "料理"
-   ],
-   "name": "ユイ",
-   "personality": "明るい都会っ子。丁寧な語尾（です／ます）を好む。文化と買い物と料理が好き。",
-   "preferred_endings": [
-    "です",
-    "ます",
-    "ですね"
-   ],
-   "questions": [
-    {
-     "expected_polarity": "positive",
-     "text": "こんにちは！買い物は好きですか？",
-     "topic_tags": [
-      "shopping"
-     ]
-    },
-    {
-     "expected_polarity": "any",
-     "text": "昨日作った料理、どう思いますか？",
-     "topic_tags": [
-      "cooking",
-      "food"
-     ]
-    },
-    {
-     "expected_polarity": "positive",
-     "text": "一緒に本を読みませんか？",
-     "topic_tags": [
-      "culture"
-     ]
-    },
-    {
-     "expected_polarity": "any",
-     "min_affection": 20,
-     "text": "（友達だけに）新しい文化祭の話、聞きたいですか？",
-     "topic_tags": [
-      "culture"
-     ]
-    }
-   ],
-   "race": "人間",
-   "reactions": {
-    "bad": [
-     "え……そうなんだ。",
-     "ちょっと悲しいな。"
-    ],
-    "good": [
-     "ありがとう、嬉しい！",
-     "気が合いますね！"
-    ],
-    "great": [
-     "わあ、すごく嬉しいです！",
-     "あなたと出かけるの、楽しみです！"
-    ],
-    "terrible": [
-     "……もう話しかけないでください。"
-    ],
-    "confused": [
-     "ごめん、ちょっと分からなかった……",
-     "えっと、もう一度ゆっくり言ってくれる？"
-    ],
-    "offtopic": [
-     "あれ、今の話と違うような……",
-     "ごめん、話が急に変わってついていけない"
-    ],
-    "minimal": [
-     "それだけ……？ もう少し教えてほしいな",
-     "うーん、気持ちが見えなくて寂しいかも"
-    ]
-   },
-   "stage_id": "city",
-   "portrait": "res://assets/yui.png",
-   "accent": "#4a7fb5",
-   "turn_questions": [
-    {
-     "text": "ところで、今度お祭りがあるんです！ 一緒に行きたいですか？",
-     "expected_polarity": "any",
-     "topic_tags": [
-      "culture",
-      "daily"
-     ]
-    },
-    {
-     "text": "実はダンスの練習をしてるんです。見てくれますか？",
-     "expected_polarity": "positive",
-     "topic_tags": [
-      "culture",
-      "exercise"
-     ]
-    }
-   ]
-  },
-  {
-   "disliked_words": [
-    "嫌い"
-   ],
-   "id": "tiny_pipi",
-   "liked_tags": [
-    "magic",
-    "mystery",
-    "rare",
-    "nature"
-   ],
-   "liked_words": [
-    "魔法",
-    "星",
-    "珍しい石",
-    "不思議"
-   ],
-   "name": "ピピ",
-   "personality": "好奇心いっぱいの小人。「なの」という語尾を好む。魔法と不思議な現象が大好き。",
-   "preferred_endings": [
-    "なの",
-    "だよ"
-   ],
-   "questions": [
-    {
-     "expected_polarity": "positive",
-     "text": "ねえねえ！魔法は好き？",
-     "topic_tags": [
-      "magic"
-     ]
-    },
-    {
-     "expected_polarity": "any",
-     "text": "昨日の不思議な光、見た？",
-     "topic_tags": [
-      "mystery",
-      "magic"
-     ]
-    },
-    {
-     "expected_polarity": "positive",
-     "text": "一緒に星を見たい？",
-     "topic_tags": [
-      "nature",
-      "mystery"
-     ]
-    },
-    {
-     "expected_polarity": "any",
-     "min_affection": 20,
-     "text": "（友達だけに）珍しい石の秘密、知りたい？",
-     "topic_tags": [
-      "rare",
-      "mystery"
-     ]
-    }
-   ],
-   "race": "小人",
-   "reactions": {
-    "bad": [
-     "えー……つまらないの。",
-     "しょんぼりなの……。"
-    ],
-    "good": [
-     "わあい！嬉しいの！",
-     "きらきらした気持ちなの！"
-    ],
-    "great": [
-     "すごいすごい！大好きなの！",
-     "あなたは特別なの！"
-    ],
-    "terrible": [
-     "……ぴぴ、悲しいの。"
-    ],
-    "confused": [
-     "なになに？ ことばがバラバラなの。",
-     "ぴぴ、わからなかったの……"
-    ],
-    "offtopic": [
-     "あれれ？ お話が飛んじゃったの",
-     "今はその話じゃないの"
-    ],
-    "minimal": [
-     "それだけなの？ もっとお話したいの",
-     "ぴぴ、もっと聞きたいの！"
-    ]
-   },
-   "stage_id": "mystic_forest",
-   "portrait": "res://assets/pipi.png",
-   "accent": "#8e6cc8",
-   "turn_questions": [
-    {
-     "text": "ところで！ 洞窟の奥で光る石、見たことある？",
-     "expected_polarity": "any",
-     "topic_tags": [
-      "mystery",
-      "rare",
-      "ore"
-     ]
-    },
-    {
-     "text": "実はね、温泉が湧く場所を知ってるの！ 行きたい？",
-     "expected_polarity": "positive",
-     "topic_tags": [
-      "nature",
-      "mystery"
-     ]
-    }
-   ]
-  }
- ],
- "comment": "キャラ追加はここに1件足すだけです。stage_idはstages.jsonのid、liked_tagsはwords.jsonのtagsと照合されます。"
+  ],
+  "comment": "キャラ追加はここに1件足すだけです。stage_idはstages.jsonのid、liked_tagsはwords.jsonのtagsと照合されます。"
 }
