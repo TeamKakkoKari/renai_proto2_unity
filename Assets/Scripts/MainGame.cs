@@ -236,9 +236,18 @@ public class MainGame : MonoBehaviour
         t.alignment = anchor;
         t.horizontalOverflow = HorizontalWrapMode.Wrap;
         t.verticalOverflow = VerticalWrapMode.Overflow;
+        t.alignByGeometry = true; // 文字の表示をくっきりさせる
         t.raycastTarget = false;
         SetRect(t.rectTransform, x, y, w, h);
         return t;
+    }
+
+    // 長い文章でも枠からはみ出さないよう、フォントサイズを自動調整する
+    private void FitText(Text t, int minSize, int maxSize)
+    {
+        t.resizeTextForBestFit = true;
+        t.resizeTextMinSize = minSize;
+        t.resizeTextMaxSize = maxSize;
     }
 
     private Image MkPanel(Transform parent, Color color, float x, float y, float w, float h)
@@ -356,6 +365,7 @@ public class MainGame : MonoBehaviour
         MkLabel(top.transform, "ことばを紡ぐ恋愛シミュレーション", 18, Color.white, 16, 13, 430, 26);
         MkButton(top.transform, "🗺 マップ", 15, 454, 8, 120, 36, ShowMap);
         affectionLabel = MkLabel(top.transform, "", 18, new Color(1f, 0.85f, 0.9f), 586, 13, 560, 26);
+        FitText(affectionLabel, 11, 18);
         MkButton(top.transform, "ログ", 15, 1180, 8, 84, 36, ToggleBacklog);
 
         BuildTimerBar();
@@ -393,7 +403,9 @@ public class MainGame : MonoBehaviour
 
         nameLabel = MkLabel(pt, "", 21, new Color(0.65f, 1f, 0.75f), 16, 8, 1216, 28);
         personalityLabel = MkLabel(pt, "", 13, new Color(0.75f, 0.78f, 0.9f), 16, 38, 1216, 20);
+        FitText(personalityLabel, 10, 13);
         dialogueLabel = MkLabel(pt, "", 20, Color.white, 16, 62, 1216, 96);
+        FitText(dialogueLabel, 13, 20);
         nextButton = MkButton(pt, "つぎへ ▼", 15, 16, FrameStory.height - 42, 170, 34, OnNext);
 
         // 選択欄（セリフ枠の中に広がる）
@@ -401,12 +413,14 @@ public class MainGame : MonoBehaviour
         SetRect(askGroup.GetComponent<RectTransform>(), 0, 0, 1248, 404);
         var at = askGroup.transform;
         sentenceLabel = MkLabel(at, "（まだ何も選んでいません）", 21, new Color(0.9f, 0.97f, 1f), 16, 100, 990, 36);
+        FitText(sentenceLabel, 12, 21);
         speakButton = MkButton(at, "💬 発言する", 21, 1022, 98, 210, 42, () => DoSpeak(false));
         chipsGroup = SetRect(NewObj(at, "Chips").GetComponent<RectTransform>(), 16, 142, 1040, 38);
         MkButton(at, "全解除", 14, 1072, 146, 160, 30, ClearSelected);
         tabsArea = SetRect(NewObj(at, "Tabs").GetComponent<RectTransform>(), 16, 186, 1216, 32);
         paletteArea = SetRect(NewObj(at, "Palette").GetComponent<RectTransform>(), 16, 224, 1216, 132);
         resultLabel = MkLabel(at, "", 13, new Color(0.85f, 0.9f, 1f), 16, 364, 1216, 36);
+        FitText(resultLabel, 10, 13);
         askGroup.SetActive(false);
     }
 
@@ -556,7 +570,7 @@ public class MainGame : MonoBehaviour
         MkLabel(pt, "〜 プロトタイプ2 〜　5つの地域で、ことばを組み合わせて物語を紡ごう", 20, new Color(0.9f, 0.93f, 1f), 0, 300, 1280, 30, TextAnchor.MiddleCenter);
         MkButton(pt, "▶ ゲームスタート", 26, 480, 356, 320, 64, ShowMap);
         MkButton(pt, "おわる", 16, 560, 436, 160, 40, () => Application.Quit());
-        MkLabel(pt, "Prototype 2 v11 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, TextAnchor.UpperRight);
+        MkLabel(pt, "Prototype 2 v12 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, TextAnchor.UpperRight);
     }
 
     private Dictionary<string, object> CharForStage(string stageId)
@@ -586,6 +600,7 @@ public class MainGame : MonoBehaviour
         var header = MkPanel(pt, new Color(0.05f, 0.06f, 0.12f, 0.82f), 0, 0, 1280, 56);
         header.raycastTarget = false;
         MkLabel(header.transform, "🗺 行き先を選んでください", 22, Color.white, 20, 14, 800, 28);
+        MkButton(header.transform, "好感度リセット", 13, 996, 10, 132, 36, ResetAffection);
         MkButton(header.transform, "タイトルへ", 15, 1140, 10, 120, 36, ShowTitle);
         foreach (var s in stages)
         {
@@ -600,6 +615,7 @@ public class MainGame : MonoBehaviour
         var info = MkPanel(pt, new Color(0.05f, 0.06f, 0.12f, 0.82f), 0, 648, 1280, 72);
         info.raycastTarget = false;
         mapInfoLabel = MkLabel(info.transform, "地域にカーソルを合わせると説明が出ます。クリックでその地域へ出発します。", 16, new Color(0.95f, 0.96f, 1f), 20, 10, 1240, 56);
+        FitText(mapInfoLabel, 11, 16);
         mapScreen.SetActive(false);
     }
 
@@ -667,10 +683,28 @@ public class MainGame : MonoBehaviour
     private void StartStory()
     {
         string cid = J.GetStr(currentChar, "id");
+        // 好感度対策: 物語の始まり（周回・入場時）に、冷めた気持ちは時間経過で少し回復する
+        int aff = AffectionOf(cid);
+        if (aff < 0)
+        {
+            affection[cid] = Math.Min(0, aff + 10);
+            SaveAffection();
+            LogLine("システム", "（時間が経ち、" + J.GetStr(currentChar, "name") + "の気持ちが少し落ち着いたようだ）");
+            RefreshCharPanel();
+        }
         var story = J.GetDict(stories, cid);
         beats = J.GetList(story, "beats");
         storyPos = 0;
         ShowBeat();
+    }
+
+    private void ResetAffection()
+    {
+        var keys = new List<string>(affection.Keys);
+        foreach (var k in keys) affection[k] = 0;
+        SaveAffection();
+        RefreshCharPanel();
+        mapInfoLabel.text = "好感度をリセットしました（全キャラクター 0）。地域をクリックでその地域へ出発します。";
     }
 
     private void SetSpeaker(bool isLine)
@@ -1085,6 +1119,8 @@ public class MainGame : MonoBehaviour
         // 補正は解釈の内容に対してのみ小さく加える
         var ana = SentenceAnalyzer.Analyze(selected, currentChar, activeQuestion, evalCfg, AffectionOf(cid), res);
         int delta = J.GetInt(res, "score") + ana.modifier;
+        // 好感度対策: すでにマイナスの相手は、さらに大きくは下がりにくい（掘り下げ防止）
+        if (delta < 0 && AffectionOf(cid) < 0) delta = delta / 2;
         affection[cid] = Mathf.Clamp(AffectionOf(cid) + delta, -20, 100);
         SaveAffection();
         turnCount++;
