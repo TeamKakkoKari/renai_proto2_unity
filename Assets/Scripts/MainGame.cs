@@ -23,7 +23,10 @@ public class MainGame : MonoBehaviour
     private Dictionary<string, object> currentChar = new Dictionary<string, object>();
     private Dictionary<string, object> currentStage = new Dictionary<string, object>();
     private Dictionary<string, int> affection = new Dictionary<string, int>();
+    private Dictionary<string, int> fun = new Dictionary<string, int>();
+    private readonly HashSet<string> favoriteWords = new HashSet<string>();
     private List<Dictionary<string, object>> selected = new List<Dictionary<string, object>>();
+    private int selectedChip = -1;
     private int turnCount = 0;
     private List<object> beats = new List<object>();
     private int storyPos = 0;
@@ -50,6 +53,7 @@ public class MainGame : MonoBehaviour
     private Text personalityLabel;
     private Button nextButton;
     private Text affectionLabel;
+    private Text funLabel;
     private RectTransform msgPanel;
     private GameObject askGroup;
     private Text timerLabel;
@@ -64,6 +68,7 @@ public class MainGame : MonoBehaviour
     private readonly Dictionary<string, List<Dictionary<string, object>>> paletteGroups =
         new Dictionary<string, List<Dictionary<string, object>>>();
     private readonly List<KeyValuePair<string, Button>> tabButtons = new List<KeyValuePair<string, Button>>();
+    private readonly List<string> paletteCatOrder = new List<string>();
     private Text resultLabel;
     private Button speakButton;
     private GameObject backlogPanel;
@@ -158,13 +163,28 @@ public class MainGame : MonoBehaviour
 
     private void LoadAffection()
     {
-        foreach (var c in characters) affection[J.GetStr(c, "id")] = 0;
+        foreach (var c in characters)
+        {
+            string id = J.GetStr(c, "id");
+            affection[id] = 0;
+            fun[id] = 0;
+        }
         if (File.Exists(SavePath))
         {
             try
             {
-                var parsed = J.Dict(JsonParser.Parse(File.ReadAllText(SavePath)));
-                foreach (var kv in parsed) affection[kv.Key] = J.GetInt(parsed, kv.Key);
+                var root = J.Dict(JsonParser.Parse(File.ReadAllText(SavePath)));
+                var aff = root;
+                if (root.ContainsKey("affection"))
+                {
+                    // v13形式: 好感度・面白さ・お気に入り単語をまとめて保存
+                    aff = J.GetDict(root, "affection");
+                    var fd = J.GetDict(root, "fun");
+                    foreach (var kv in fd) fun[kv.Key] = J.GetInt(fd, kv.Key);
+                    foreach (var fo in J.GetList(root, "favorites")) favoriteWords.Add(J.Str(fo));
+                }
+                // 旧形式（好感度だけのフラットなJSON）もそのまま読み込める
+                foreach (var kv in aff) affection[kv.Key] = J.GetInt(aff, kv.Key);
             }
             catch (Exception) { /*壊れたセーブは初期値で続行*/ }
         }
@@ -172,15 +192,32 @@ public class MainGame : MonoBehaviour
 
     private void SaveAffection()
     {
-        var parts = new List<string>();
-        foreach (var kv in affection) parts.Add("\"" + kv.Key + "\":" + kv.Value);
-        File.WriteAllText(SavePath, "{" + string.Join(",", parts) + "}");
+        try
+        {
+            var ap = new List<string>();
+            foreach (var kv in affection) ap.Add("\"" + kv.Key + "\":" + kv.Value);
+            var fp = new List<string>();
+            foreach (var kv in fun) fp.Add("\"" + kv.Key + "\":" + kv.Value);
+            var fv = new List<string>();
+            foreach (var t in favoriteWords) fv.Add("\"" + t + "\"");
+            File.WriteAllText(SavePath,
+                "{\"affection\":{" + string.Join(",", ap)
+                + "},\"fun\":{" + string.Join(",", fp)
+                + "},\"favorites\":[" + string.Join(",", fv) + "]}");
+        }
+        catch (Exception) { /*保存に失敗してもゲームは続行*/ }
     }
 
     private int AffectionOf(string cid)
     {
         int v;
         return affection.TryGetValue(cid, out v) ? v : 0;
+    }
+
+    private int FunOf(string cid)
+    {
+        int v;
+        return fun.TryGetValue(cid, out v) ? v : 0;
     }
 
     // ---------- UI部品ヘルパー ----------
@@ -364,8 +401,10 @@ public class MainGame : MonoBehaviour
         var top = MkPanel(root, new Color(0.06f, 0.06f, 0.12f, 0.85f), 0, 0, 1280, 52);
         MkLabel(top.transform, "ことばを紡ぐ恋愛シミュレーション", 18, Color.white, 16, 13, 430, 26);
         MkButton(top.transform, "🗺 マップ", 15, 454, 8, 120, 36, ShowMap);
-        affectionLabel = MkLabel(top.transform, "", 18, new Color(1f, 0.85f, 0.9f), 586, 13, 560, 26);
+        affectionLabel = MkLabel(top.transform, "", 18, new Color(1f, 0.85f, 0.9f), 586, 13, 360, 26);
         FitText(affectionLabel, 11, 18);
+        funLabel = MkLabel(top.transform, "", 18, new Color(1f, 0.9f, 0.6f), 954, 13, 218, 26);
+        FitText(funLabel, 11, 18);
         MkButton(top.transform, "ログ", 15, 1180, 8, 84, 36, ToggleBacklog);
 
         BuildTimerBar();
@@ -408,17 +447,24 @@ public class MainGame : MonoBehaviour
         FitText(dialogueLabel, 13, 20);
         nextButton = MkButton(pt, "つぎへ ▼", 15, 16, FrameStory.height - 42, 170, 34, OnNext);
 
-        // 選択欄（セリフ枠の中に広がる）
+        // 選択欄（セリフ枠の中に広がる）。発言エリアは独立したパネルとして見せる
         askGroup = NewObj(pt, "AskGroup");
         SetRect(askGroup.GetComponent<RectTransform>(), 0, 0, 1248, 404);
         var at = askGroup.transform;
-        sentenceLabel = MkLabel(at, "（まだ何も選んでいません）", 21, new Color(0.9f, 0.97f, 1f), 16, 100, 990, 36);
+        var inner = MkPanel(at, new Color(0.13f, 0.14f, 0.22f, 0.95f), 8, 116, 1232, 242);
+        inner.raycastTarget = false;
+        MkLabel(at, "✏ あなたの発言", 12, new Color(0.75f, 0.8f, 0.95f), 24, 122, 300, 18);
+        sentenceLabel = MkLabel(at, "（まだ何も選んでいません）", 21, new Color(0.9f, 0.97f, 1f), 16, 142, 990, 34);
         FitText(sentenceLabel, 12, 21);
-        speakButton = MkButton(at, "💬 発言する", 21, 1022, 98, 210, 42, () => DoSpeak(false));
-        chipsGroup = SetRect(NewObj(at, "Chips").GetComponent<RectTransform>(), 16, 142, 1040, 38);
-        MkButton(at, "全解除", 14, 1072, 146, 160, 30, ClearSelected);
-        tabsArea = SetRect(NewObj(at, "Tabs").GetComponent<RectTransform>(), 16, 186, 1216, 32);
-        paletteArea = SetRect(NewObj(at, "Palette").GetComponent<RectTransform>(), 16, 224, 1216, 132);
+        speakButton = MkButton(at, "💬 発言する", 21, 1022, 140, 210, 42, () => DoSpeak(false));
+        chipsGroup = SetRect(NewObj(at, "Chips").GetComponent<RectTransform>(), 16, 182, 616, 38);
+        MkButton(at, "◀", 14, 640, 186, 46, 30, () => MoveChip(-1));
+        MkButton(at, "▶", 14, 692, 186, 46, 30, () => MoveChip(1));
+        MkButton(at, "削除", 14, 744, 186, 76, 30, DeleteChip);
+        MkButton(at, "↩ 一つ戻す", 13, 828, 186, 118, 30, UndoLast);
+        MkButton(at, "全解除", 14, 954, 186, 110, 30, ClearSelected);
+        tabsArea = SetRect(NewObj(at, "Tabs").GetComponent<RectTransform>(), 16, 224, 1216, 30);
+        paletteArea = SetRect(NewObj(at, "Palette").GetComponent<RectTransform>(), 16, 258, 1216, 98);
         resultLabel = MkLabel(at, "", 13, new Color(0.85f, 0.9f, 1f), 16, 364, 1216, 36);
         FitText(resultLabel, 10, 13);
         askGroup.SetActive(false);
@@ -570,7 +616,7 @@ public class MainGame : MonoBehaviour
         MkLabel(pt, "〜 プロトタイプ2 〜　5つの地域で、ことばを組み合わせて物語を紡ごう", 20, new Color(0.9f, 0.93f, 1f), 0, 300, 1280, 30, TextAnchor.MiddleCenter);
         MkButton(pt, "▶ ゲームスタート", 26, 480, 356, 320, 64, ShowMap);
         MkButton(pt, "おわる", 16, 560, 436, 160, 40, () => Application.Quit());
-        MkLabel(pt, "Prototype 2 v12 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, TextAnchor.UpperRight);
+        MkLabel(pt, "Prototype 2 v13 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, TextAnchor.UpperRight);
     }
 
     private Dictionary<string, object> CharForStage(string stageId)
@@ -678,6 +724,7 @@ public class MainGame : MonoBehaviour
         int hcount = Mathf.Clamp(aff / 10, 0, 10);
         for (int i = 0; i < hcount; i++) hearts += "♥";
         affectionLabel.text = "  " + J.GetStr(currentChar, "name") + " 好感度 " + aff + " " + hearts + " (" + J.GetStr(lv, "name") + ")";
+        if (funLabel != null) funLabel.text = "😊 面白さ " + FunOf(cid);
     }
 
     private void StartStory()
@@ -702,9 +749,11 @@ public class MainGame : MonoBehaviour
     {
         var keys = new List<string>(affection.Keys);
         foreach (var k in keys) affection[k] = 0;
+        var fkeys = new List<string>(fun.Keys);
+        foreach (var k in fkeys) fun[k] = 0;
         SaveAffection();
         RefreshCharPanel();
-        mapInfoLabel.text = "好感度をリセットしました（全キャラクター 0）。地域をクリックでその地域へ出発します。";
+        mapInfoLabel.text = "好感度と面白さをリセットしました（全キャラクター 0）。地域をクリックでその地域へ出発します。";
     }
 
     private void SetSpeaker(bool isLine)
@@ -902,7 +951,7 @@ public class MainGame : MonoBehaviour
         ShowDialogue("「" + J.GetStr(q, "text") + "」", J.GetStr(currentChar, "name"));
         nextButton.gameObject.SetActive(false);
         speakButton.interactable = true;
-        resultLabel.text = "カテゴリーから単語を選んで文章を作り、発言してください。選んだ単語のカードを押すと取り消せます。時間切れは無言 (-10) です。";
+        resultLabel.text = "単語を選んで文章を作り、発言してください。カードは × で削除、選んで ◀▶ で並べ替えできます。時間切れは無言 (-10) です。";
         timeLeft = timeLimit;
         UpdateTimerUi();
         BuildPalette(OfferedWords(activeQuestion));
@@ -980,22 +1029,30 @@ public class MainGame : MonoBehaviour
         }
         foreach (var cat in paletteGroups.Keys)
             if (!catOrder.Contains(cat)) catOrder.Add(cat);
+        paletteCatOrder.Clear();
+        paletteCatOrder.AddRange(catOrder);
 
-        for (int i = tabsArea.childCount - 1; i >= 0; i--)
-            Destroy(tabsArea.GetChild(i).gameObject);
-        tabButtons.Clear();
-        float x = 0f;
-        string firstCat = "";
+        // タブ: すべて / お気に入り / カテゴリー別
+        var tabDefs = new List<KeyValuePair<string, string>>();
+        tabDefs.Add(new KeyValuePair<string, string>("__all", "すべて"));
+        tabDefs.Add(new KeyValuePair<string, string>("__fav", "★ お気に入り"));
         foreach (var cat in catOrder)
         {
             List<Dictionary<string, object>> list;
             if (!paletteGroups.TryGetValue(cat, out list) || list.Count == 0) continue;
-            if (firstCat == "") firstCat = cat;
-            string catId = cat;
             string label;
             if (!catLabels.TryGetValue(cat, out label)) label = cat;
-            float tw = label.Length * 17f + 26f;
-            var tab = MkButton(tabsArea, label, 14, x, 0, tw, 32, () =>
+            tabDefs.Add(new KeyValuePair<string, string>(cat, label));
+        }
+        for (int i = tabsArea.childCount - 1; i >= 0; i--)
+            Destroy(tabsArea.GetChild(i).gameObject);
+        tabButtons.Clear();
+        float x = 0f;
+        foreach (var def in tabDefs)
+        {
+            string catId = def.Key;
+            float tw = def.Value.Length * 17f + 26f;
+            var tab = MkButton(tabsArea, def.Value, 14, x, 0, tw, 30, () =>
             {
                 activeCategory = catId;
                 RefreshTabs();
@@ -1004,8 +1061,9 @@ public class MainGame : MonoBehaviour
             tabButtons.Add(new KeyValuePair<string, Button>(catId, tab));
             x += tw + 6f;
         }
-        if (activeCategory == "" || !paletteGroups.ContainsKey(activeCategory))
-            activeCategory = firstCat;
+        if (activeCategory == "" ||
+            (activeCategory != "__all" && activeCategory != "__fav" && !paletteGroups.ContainsKey(activeCategory)))
+            activeCategory = "__all";
         RefreshTabs();
         RenderPaletteGrid();
     }
@@ -1027,49 +1085,85 @@ public class MainGame : MonoBehaviour
         for (int i = paletteArea.childCount - 1; i >= 0; i--)
             Destroy(paletteArea.GetChild(i).gameObject);
         List<Dictionary<string, object>> items;
-        if (!paletteGroups.TryGetValue(activeCategory, out items)) return;
+        if (activeCategory == "__all")
+        {
+            items = new List<Dictionary<string, object>>();
+            foreach (var cat in paletteCatOrder)
+            {
+                List<Dictionary<string, object>> l;
+                if (paletteGroups.TryGetValue(cat, out l)) items.AddRange(l);
+            }
+        }
+        else if (activeCategory == "__fav")
+        {
+            // お気に入りは、今回提示されていない単語からも選べる
+            items = new List<Dictionary<string, object>>();
+            foreach (var wo in J.GetList(dataWords, "words"))
+            {
+                var w = J.Dict(wo);
+                if (favoriteWords.Contains(J.GetStr(w, "text"))) items.Add(w);
+            }
+        }
+        else if (!paletteGroups.TryGetValue(activeCategory, out items)) return;
         var catColors = new Dictionary<string, string>();
         foreach (var co in J.GetList(dataWords, "categories"))
         {
             var c = J.Dict(co);
             catColors[J.GetStr(c, "id")] = J.GetStr(c, "color", "#ffffff");
         }
-        string hex;
-        if (!catColors.TryGetValue(activeCategory, out hex)) hex = "#ffffff";
-        Color col = Color.Lerp(HexColor(hex, Color.white), Color.white, 0.3f);
         int n = items.Count;
         int cols = n <= 4 ? Math.Max(1, n) : (n <= 8 ? 4 : (n <= 12 ? 6 : 8));
         int rows = Mathf.Max(1, Mathf.CeilToInt(n / (float)cols));
         float cellW = 1216f / cols;
-        float cellH = Mathf.Min(44f, 132f / rows);
+        float cellH = Mathf.Min(36f, 98f / rows);
+        float bh = Mathf.Max(28f, cellH - 4f);
         for (int idx = 0; idx < n; idx++)
         {
             var w = items[idx];
             string text = J.GetStr(w, "text");
+            string hex;
+            if (!catColors.TryGetValue(J.GetStr(w, "category"), out hex)) hex = "#ffffff";
+            Color col = Color.Lerp(HexColor(hex, Color.white), Color.white, 0.3f);
             var token = w;
             var b = MkButton(paletteArea, text, 17, 0, 0, 60, 34, () => AddWord(token));
             var label = b.GetComponentInChildren<Text>();
             label.color = col;
-            float bw = Mathf.Min(cellW - 8f, Mathf.Max(label.preferredWidth + 18f, text.Length * 15f + 18f));
+            float bw = Mathf.Min(cellW - 8f, Mathf.Max(label.preferredWidth + 42f, text.Length * 15f + 42f));
             var rt = b.GetComponent<RectTransform>();
-            rt.sizeDelta = new Vector2(bw, 34f);
-            label.rectTransform.sizeDelta = new Vector2(bw, 34f);
+            rt.sizeDelta = new Vector2(bw, bh);
+            label.rectTransform.sizeDelta = new Vector2(bw, bh);
             float cx = (idx % cols) * cellW + (cellW - bw) / 2f;
-            float cy = (idx / cols) * cellH + (cellH - 34f) / 2f;
+            float cy = (idx / cols) * cellH + (cellH - bh) / 2f;
             rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = new Vector2(cx + bw / 2f, -(cy + 17f));
+            rt.anchoredPosition = new Vector2(cx + bw / 2f, -(cy + bh / 2f));
+            // 右端の星でお気に入りに登録/解除
+            bool fav = favoriteWords.Contains(text);
+            string wordText = text;
+            var star = MkButton(b.transform, fav ? "★" : "☆", 13, bw - 27, (bh - 26f) / 2f, 25, 26, () => ToggleFavorite(wordText));
+            star.GetComponent<Image>().color = new Color(0, 0, 0, 0);
+            var sl = star.GetComponentInChildren<Text>();
+            if (sl != null) sl.color = fav ? new Color(1f, 0.85f, 0.3f) : new Color(0.6f, 0.62f, 0.7f);
         }
+    }
+
+    private void ToggleFavorite(string text)
+    {
+        if (!favoriteWords.Add(text)) favoriteWords.Remove(text);
+        SaveAffection();
+        RenderPaletteGrid();
     }
 
     private void AddWord(Dictionary<string, object> token)
     {
         selected.Add(new Dictionary<string, object>(token));
+        selectedChip = selected.Count - 1;
         RefreshSentence();
     }
 
     private void ClearSelected()
     {
         selected.Clear();
+        selectedChip = -1;
         RefreshSentence();
     }
 
@@ -1089,22 +1183,63 @@ public class MainGame : MonoBehaviour
             string text = J.GetStr(selected[i], "text");
             parts.Add(text);
             int idx = i;
-            string chipText = text + " ×";
-            // カードを押すと、その言葉を取り消せる
-            var chip = MkButton(chipsGroup, chipText, 15, x, y, 60, 30, () => { selected.RemoveAt(idx); RefreshSentence(); });
+            // カード本体を押すと選択（◀▶で並べ替え）、右端の × で削除
+            var chip = MkButton(chipsGroup, text, 15, x, y, 60, 30, () => { selectedChip = idx; RefreshSentence(); });
             var label = chip.GetComponentInChildren<Text>();
-            float cw = Mathf.Max(label.preferredWidth + 14f, chipText.Length * 14f + 14f);
+            float cw = Mathf.Max(label.preferredWidth + 38f, text.Length * 14f + 38f);
             var rt = chip.GetComponent<RectTransform>();
             rt.sizeDelta = new Vector2(cw, 30);
             label.rectTransform.sizeDelta = new Vector2(cw, 30);
+            if (i == selectedChip)
+            {
+                var img = chip.GetComponent<Image>();
+                if (img != null) img.color = new Color(0.36f, 0.42f, 0.62f, 1f);
+            }
+            var del = MkButton(chip.transform, "×", 13, cw - 27, 2, 25, 26, () =>
+            {
+                selected.RemoveAt(idx);
+                if (selectedChip >= selected.Count) selectedChip = selected.Count - 1;
+                RefreshSentence();
+            });
+            del.GetComponent<Image>().color = new Color(0, 0, 0, 0);
+            var dl = del.GetComponentInChildren<Text>();
+            if (dl != null) dl.color = new Color(0.85f, 0.87f, 0.95f);
             x += cw + 4f;
-            if (x > 1040f && i + 1 < selected.Count)
+            if (x > 616f && i + 1 < selected.Count)
             {
                 x = 0f;
                 y += 34f;
             }
         }
         sentenceLabel.text = "「" + string.Join("", parts) + "」";
+    }
+
+    private void MoveChip(int dir)
+    {
+        if (selectedChip < 0) return;
+        int j = selectedChip + dir;
+        if (j < 0 || j >= selected.Count) return;
+        var tmp = selected[selectedChip];
+        selected[selectedChip] = selected[j];
+        selected[j] = tmp;
+        selectedChip = j;
+        RefreshSentence();
+    }
+
+    private void DeleteChip()
+    {
+        if (selectedChip < 0 || selectedChip >= selected.Count) return;
+        selected.RemoveAt(selectedChip);
+        if (selectedChip >= selected.Count) selectedChip = selected.Count - 1;
+        RefreshSentence();
+    }
+
+    private void UndoLast()
+    {
+        if (selected.Count == 0) return;
+        selected.RemoveAt(selected.Count - 1);
+        if (selectedChip >= selected.Count) selectedChip = selected.Count - 1;
+        RefreshSentence();
     }
 
     private void DoSpeak(bool isTimeout)
@@ -1150,6 +1285,16 @@ public class MainGame : MonoBehaviour
             else if (key == "terrible") expr = "angry";
             SetExpression(expr);
         }
+        // 面白さは好感度とは別の物差しで動く（笑える失敗は好感度が低くても面白い）
+        int funDelta = 0;
+        if (ana.absurd) funDelta += 8;
+        if (rkey == "great") funDelta += 5;
+        else if (rkey == "good") funDelta += 3;
+        else if (rkey == "confused" || rkey == "clarify") funDelta += 2;
+        else if (rkey == "offtopic") funDelta += 1;
+        else if (rkey == "terrible") funDelta -= 3;
+        fun[cid] = Mathf.Clamp(FunOf(cid) + funDelta, 0, 100);
+        SaveAffection();
         var reactions = J.GetList(J.GetDict(currentChar, "reactions"), rkey);
         string reaction = reactions.Count > 0 ? J.Str(reactions[turnCount % reactions.Count], "……") : "……";
         ShowStoryBox();
@@ -1158,7 +1303,8 @@ public class MainGame : MonoBehaviour
         var reasons = res["reasons"] as List<string> ?? new List<string>();
         var rparts = new List<string>();
         foreach (var r in reasons) rparts.Add("・" + r);
-        string head = "好感度 " + (delta >= 0 ? "+" + delta : delta.ToString()) + " → " + AffectionOf(cid);
+        string head = "好感度 " + (delta >= 0 ? "+" + delta : delta.ToString()) + " → " + AffectionOf(cid)
+            + " ｜ 面白さ " + (funDelta >= 0 ? "+" + funDelta : funDelta.ToString()) + " → " + FunOf(cid);
         if (isTimeout) head = "⏱ 時間切れで無言になってしまった… " + head;
         if (J.GetBool(res, "scene_change"))
         {
@@ -1168,6 +1314,7 @@ public class MainGame : MonoBehaviour
         personalityLabel.text = head;
         LogLine("評価", head + " " + string.Join(" ", rparts) + " ｜ 解析: " + ana.Summary());
         selected.Clear();
+        selectedChip = -1;
         speakButton.interactable = false;
         nextButton.gameObject.SetActive(true);
         PortraitReact(delta);
