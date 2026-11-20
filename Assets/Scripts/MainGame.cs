@@ -551,9 +551,9 @@ public class MainGame : MonoBehaviour
         speakButton.GetComponent<Image>().color = new Color(0.32f, 0.58f, 0.34f);
         var palPanel = MkPanel(at, new Color(0.98f, 0.96f, 0.90f, 0.97f), 16, 448, 944, 256);
         palPanel.raycastTarget = false;
-        tabsArea = SetRect(NewObj(at, "Tabs").GetComponent<RectTransform>(), 32, 462, 690, 30);
+        tabsArea = SetRect(NewObj(at, "Tabs").GetComponent<RectTransform>(), 32, 458, 690, 64);
         BuildSearchField(at, 734, 462, 210, 30);
-        paletteArea = SetRect(NewObj(at, "Palette").GetComponent<RectTransform>(), 32, 502, 912, 158);
+        paletteArea = SetRect(NewObj(at, "Palette").GetComponent<RectTransform>(), 32, 530, 912, 130);
         var hint = MkLabel(at, "ⓘ 単語を選んで、自由に文章を作りましょう！", 13, new Color(0.5f, 0.46f, 0.4f), 32, 672, 700, 20);
         hint.raycastTarget = false;
         askGroup.SetActive(false);
@@ -672,7 +672,7 @@ public class MainGame : MonoBehaviour
         MkLabel(pt, "〜 プロトタイプ2 〜　5つの地域で、ことばを組み合わせて物語を紡ごう", 20, new Color(0.9f, 0.93f, 1f), 0, 300, 1280, 30, TextAnchor.MiddleCenter);
         MkButton(pt, "▶ ゲームスタート", 26, 480, 356, 320, 64, ShowMap);
         MkButton(pt, "おわる", 16, 560, 436, 160, 40, () => Application.Quit());
-        MkLabel(pt, "Prototype 2 v15 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, TextAnchor.UpperRight);
+        MkLabel(pt, "Prototype 2 v16 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, TextAnchor.UpperRight);
     }
 
     private Dictionary<string, object> CharForStage(string stageId)
@@ -1123,12 +1123,14 @@ public class MainGame : MonoBehaviour
         for (int i = tabsArea.childCount - 1; i >= 0; i--)
             Destroy(tabsArea.GetChild(i).gameObject);
         tabButtons.Clear();
-        float x = 0f;
+        float x = 0f, ty = 0f;
         foreach (var def in tabDefs)
         {
             string catId = def.Key;
             float tw = def.Value.Length * 18f + 28f;
-            var tab = MkButton(tabsArea, def.Value, 15, x, 0, tw, 30, () =>
+            // タブが横に収まらない場合は2行目に折り返す（検索欄と重ねない）
+            if (x > 0f && x + tw > 690f) { x = 0f; ty += 34f; }
+            var tab = MkButton(tabsArea, def.Value, 15, x, ty, tw, 30, () =>
             {
                 activeCategory = catId;
                 RefreshTabs();
@@ -1203,7 +1205,9 @@ public class MainGame : MonoBehaviour
         var paSize = ((RectTransform)paletteArea).sizeDelta;
         float cellW = paSize.x / cols;
         float cellH = Mathf.Min(40f, paSize.y / rows);
-        float bh = Mathf.Max(28f, cellH - 4f);
+        // ボタン同士が縦に重ならないよう、行数が多いときはボタンと文字を小さくする
+        float bh = Mathf.Max(20f, cellH - 4f);
+        int wordFont = bh >= 34f ? 19 : (bh >= 27f ? 16 : 14);
         for (int idx = 0; idx < n; idx++)
         {
             var w = items[idx];
@@ -1212,7 +1216,7 @@ public class MainGame : MonoBehaviour
             if (!catColors.TryGetValue(J.GetStr(w, "category"), out hex)) hex = "#ffffff";
             Color col = Color.Lerp(HexColor(hex, Color.white), Color.white, 0.3f);
             var token = w;
-            var b = MkButton(paletteArea, text, 19, 0, 0, 60, 34, () => AddWord(token));
+            var b = MkButton(paletteArea, text, wordFont, 0, 0, 60, 34, () => AddWord(token));
             var label = b.GetComponentInChildren<Text>();
             label.color = col;
             float bw = Mathf.Min(cellW - 8f, Mathf.Max(label.preferredWidth + 42f, text.Length * 15f + 42f));
@@ -1226,7 +1230,8 @@ public class MainGame : MonoBehaviour
             // 右端の星でお気に入りに登録/解除
             bool fav = favoriteWords.Contains(text);
             string wordText = text;
-            var star = MkButton(b.transform, fav ? "★" : "☆", 14, bw - 27, (bh - 26f) / 2f, 25, 26, () => ToggleFavorite(wordText));
+            float ss = Mathf.Min(26f, bh - 2f);
+            var star = MkButton(b.transform, fav ? "★" : "☆", ss < 26f ? 11 : 14, bw - ss - 2f, (bh - ss) / 2f, ss, ss, () => ToggleFavorite(wordText));
             star.GetComponent<Image>().color = new Color(0, 0, 0, 0);
             var sl = star.GetComponentInChildren<Text>();
             if (sl != null) sl.color = fav ? new Color(1f, 0.85f, 0.3f) : new Color(0.6f, 0.62f, 0.7f);
@@ -1256,33 +1261,48 @@ public class MainGame : MonoBehaviour
 
     private void RefreshSentence()
     {
-        for (int i = chipsGroup.childCount - 1; i >= 0; i--)
-            Destroy(chipsGroup.GetChild(i).gameObject);
         if (selected.Count == 0)
         {
+            for (int i = chipsGroup.childCount - 1; i >= 0; i--)
+                Destroy(chipsGroup.GetChild(i).gameObject);
             sentenceLabel.text = "（まだ何も選んでいません）";
             return;
         }
         var parts = new List<string>();
+        foreach (var w in selected) parts.Add(J.GetStr(w, "text"));
+        sentenceLabel.text = "「" + string.Join("", parts) + "」";
+        BuildChips(false);
+    }
+
+    // 選択中カードの描画。2行に収まらない場合は小型カードにして3行以内に収める（下のボタン類と重ねない）
+    private void BuildChips(bool compact)
+    {
+        for (int i = chipsGroup.childCount - 1; i >= 0; i--)
+            Destroy(chipsGroup.GetChild(i).gameObject);
+        float chipH = compact ? 23f : 30f;
+        int font = compact ? 13 : 16;
+        float pitch = compact ? 25f : 34f;
+        float pad = compact ? 30f : 38f;
         float x = 0f, y = 0f;
+        int row = 0;
         for (int i = 0; i < selected.Count; i++)
         {
             string text = J.GetStr(selected[i], "text");
-            parts.Add(text);
             int idx = i;
             // カード本体を押すと選択（◀▶で並べ替え）、右端の × で削除
-            var chip = MkButton(chipsGroup, text, 16, x, y, 60, 30, () => { selectedChip = idx; RefreshSentence(); });
+            var chip = MkButton(chipsGroup, text, font, x, y, 60, chipH, () => { selectedChip = idx; RefreshSentence(); });
             var label = chip.GetComponentInChildren<Text>();
-            float cw = Mathf.Max(label.preferredWidth + 38f, text.Length * 14f + 38f);
+            float cw = Mathf.Max(label.preferredWidth + pad, text.Length * (font - 2) + pad);
             var rt = chip.GetComponent<RectTransform>();
-            rt.sizeDelta = new Vector2(cw, 30);
-            label.rectTransform.sizeDelta = new Vector2(cw, 30);
+            rt.sizeDelta = new Vector2(cw, chipH);
+            label.rectTransform.sizeDelta = new Vector2(cw, chipH);
             if (i == selectedChip)
             {
                 var img = chip.GetComponent<Image>();
                 if (img != null) img.color = new Color(0.36f, 0.42f, 0.62f, 1f);
             }
-            var del = MkButton(chip.transform, "×", 14, cw - 27, 2, 25, 26, () =>
+            float delSize = compact ? 19f : 26f;
+            var del = MkButton(chip.transform, "×", compact ? 11 : 14, cw - delSize - 2f, (chipH - delSize) / 2f, delSize, delSize, () =>
             {
                 selected.RemoveAt(idx);
                 if (selectedChip >= selected.Count) selectedChip = selected.Count - 1;
@@ -1295,10 +1315,11 @@ public class MainGame : MonoBehaviour
             if (x > 424f && i + 1 < selected.Count)
             {
                 x = 0f;
-                y += 34f;
+                y += pitch;
+                row++;
             }
         }
-        sentenceLabel.text = "「" + string.Join("", parts) + "」";
+        if (!compact && row >= 2) BuildChips(true);
     }
 
     private void MoveChip(int dir)
