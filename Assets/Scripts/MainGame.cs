@@ -74,6 +74,8 @@ public class MainGame : MonoBehaviour
     private RectTransform chipsGroup;
     private RectTransform tabsArea;
     private RectTransform paletteArea;
+    private int palettePage = 0;
+    private Text palettePageLabel;
     private string activeCategory = "";
     private readonly Dictionary<string, List<Dictionary<string, object>>> paletteGroups =
         new Dictionary<string, List<Dictionary<string, object>>>();
@@ -556,6 +558,11 @@ public class MainGame : MonoBehaviour
         paletteArea = SetRect(NewObj(at, "Palette").GetComponent<RectTransform>(), 32, 530, 912, 130);
         var hint = MkLabel(at, "ⓘ 単語を選んで、自由に文章を作りましょう！", 13, new Color(0.5f, 0.46f, 0.4f), 32, 672, 700, 20);
         hint.raycastTarget = false;
+        // パレットのページ送り（「すべて」103語を1画面に収めるためのもの。ヒント文と重ならない位置）
+        MkButton(at, "◀", 14, 760, 668, 36, 24, () => ChangePalettePage(-1));
+        palettePageLabel = MkLabel(at, "1 / 1", 14, new Color(0.5f, 0.46f, 0.4f), 800, 668, 60, 24, TextAnchor.MiddleCenter);
+        palettePageLabel.raycastTarget = false;
+        MkButton(at, "▶", 14, 864, 668, 36, 24, () => ChangePalettePage(1));
         askGroup.SetActive(false);
     }
 
@@ -573,7 +580,7 @@ public class MainGame : MonoBehaviour
         var ph = MkLabel(go.transform, "🔍 キーワードで検索", 14, new Color(0.55f, 0.52f, 0.48f), 10, 0, w - 16, h, TextAnchor.MiddleLeft);
         field.textComponent = textComp;
         field.placeholder = ph;
-        field.onValueChanged.AddListener((string s) => { searchText = s; RenderPaletteGrid(); });
+        field.onValueChanged.AddListener((string s) => { searchText = s; palettePage = 0; RenderPaletteGrid(); });
     }
 
     private void LayoutFrame(bool ask, bool animate)
@@ -672,7 +679,7 @@ public class MainGame : MonoBehaviour
         MkLabel(pt, "〜 プロトタイプ2 〜　5つの地域で、ことばを組み合わせて物語を紡ごう", 20, new Color(0.9f, 0.93f, 1f), 0, 300, 1280, 30, TextAnchor.MiddleCenter);
         MkButton(pt, "▶ ゲームスタート", 26, 480, 356, 320, 64, ShowMap);
         MkButton(pt, "おわる", 16, 560, 436, 160, 40, () => Application.Quit());
-        MkLabel(pt, "Prototype 2 v16 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, TextAnchor.UpperRight);
+        MkLabel(pt, "Prototype 2 v17 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, TextAnchor.UpperRight);
     }
 
     private Dictionary<string, object> CharForStage(string stageId)
@@ -1133,6 +1140,7 @@ public class MainGame : MonoBehaviour
             var tab = MkButton(tabsArea, def.Value, 15, x, ty, tw, 30, () =>
             {
                 activeCategory = catId;
+                palettePage = 0;
                 RefreshTabs();
                 RenderPaletteGrid();
             });
@@ -1156,6 +1164,12 @@ public class MainGame : MonoBehaviour
                 ? new Color(0.36f, 0.42f, 0.62f, 1f)
                 : new Color(0.16f, 0.17f, 0.26f, 1f);
         }
+    }
+
+    private void ChangePalettePage(int dir)
+    {
+        palettePage += dir;
+        RenderPaletteGrid();
     }
 
     private void RenderPaletteGrid()
@@ -1193,6 +1207,14 @@ public class MainGame : MonoBehaviour
             }
         }
         else if (!paletteGroups.TryGetValue(activeCategory, out items)) return;
+        // 1ページは最大32語（8列×4行）。それ以上はページ送りし、ボタン同士が
+        // 縦に重なったりパレット／画面からはみ出したりしないようにする。
+        const int pageSize = 32;
+        int pageCount = Mathf.Max(1, Mathf.CeilToInt(items.Count / (float)pageSize));
+        palettePage = Mathf.Clamp(palettePage, 0, pageCount - 1);
+        if (palettePageLabel != null)
+            palettePageLabel.text = items.Count == 0 ? "—" : (palettePage + 1) + " / " + pageCount;
+        items = items.GetRange(palettePage * pageSize, Mathf.Min(pageSize, items.Count - palettePage * pageSize));
         var catColors = new Dictionary<string, string>();
         foreach (var co in J.GetList(dataWords, "categories"))
         {
