@@ -80,6 +80,7 @@ public class MainGame : MonoBehaviour
     private readonly Dictionary<string, List<Dictionary<string, object>>> paletteGroups =
         new Dictionary<string, List<Dictionary<string, object>>>();
     private readonly List<KeyValuePair<string, Button>> tabButtons = new List<KeyValuePair<string, Button>>();
+    private readonly List<KeyValuePair<string, Button>> paletteButtons = new List<KeyValuePair<string, Button>>();
     private readonly List<string> paletteCatOrder = new List<string>();
     private Text resultLabel;
     private Button speakButton;
@@ -667,12 +668,16 @@ public class MainGame : MonoBehaviour
         var sayPanel = MkPanelA(at, new Color(0.10f, 0.11f, 0.18f, 0.96f), 800, 92, 464, 340, 1, 1);
         sayPanel.raycastTarget = false;
         MkLabelA(at, "✏ あなたの発言", 15, new Color(0.75f, 0.8f, 0.95f), 820, 106, 300, 20, 1, 1);
+        var chipsBg = MkRectA(at, new Color(0, 0, 0, 0.20f), 816, 130, 432, 82, 1, 1);
+        chipsBg.raycastTarget = false;
         chipsGroup = SetRectA(NewObj(at, "Chips").GetComponent<RectTransform>(), 1, 1, AnchorX(1, 820, 424), AnchorY(1, 134, 74), 424, 74);
         MkButtonA(at, "◀", 15, 820, 216, 40, 30, () => MoveChip(-1), 1, 1);
         MkButtonA(at, "▶", 15, 864, 216, 40, 30, () => MoveChip(1), 1, 1);
         MkButtonA(at, "削除", 15, 908, 216, 64, 30, DeleteChip, 1, 1);
         MkButtonA(at, "↩ 一つ戻す", 14, 976, 216, 118, 30, UndoLast, 1, 1);
         MkButtonA(at, "全解除", 15, 1098, 216, 146, 30, ClearSelected, 1, 1);
+        var sentenceBg = MkRectA(at, new Color(1, 1, 1, 0.08f), 816, 248, 432, 42, 1, 1);
+        sentenceBg.raycastTarget = false;
         sentenceLabel = MkLabelA(at, "（まだ何も選んでいません）", 22, new Color(0.9f, 0.97f, 1f), 820, 252, 424, 34, 1, 1);
         FitText(sentenceLabel, 13, 22);
         AddOutline(sentenceLabel, new Color(0, 0, 0, 0.5f), 1f);
@@ -680,9 +685,9 @@ public class MainGame : MonoBehaviour
         speakButton.GetComponent<Image>().color = new Color(0.32f, 0.58f, 0.34f);
         var palPanel = MkPanelA(at, new Color(0.98f, 0.96f, 0.90f, 0.97f), 16, 448, 944, 256, 0, 0);
         palPanel.raycastTarget = false;
-        tabsArea = SetRectA(NewObj(at, "Tabs").GetComponent<RectTransform>(), 0, 0, 32, AnchorY(0, 458, 64), 690, 64);
+        tabsArea = SetRectA(NewObj(at, "Tabs").GetComponent<RectTransform>(), 0, 0, 32, AnchorY(0, 456, 60), 690, 60);
         BuildSearchField(at, 734, 462, 210, 30);
-        paletteArea = SetRectA(NewObj(at, "Palette").GetComponent<RectTransform>(), 0, 0, 32, AnchorY(0, 530, 130), 912, 130);
+        paletteArea = SetRectA(NewObj(at, "Palette").GetComponent<RectTransform>(), 0, 0, 32, AnchorY(0, 524, 140), 912, 140);
         var hint = MkLabelA(at, "ⓘ 単語を選んで、自由に文章を作りましょう！", 13, new Color(0.5f, 0.46f, 0.4f), 32, 672, 700, 20, 0, 0);
         hint.raycastTarget = false;
         // パレットのページ送り（「すべて」103語を1画面に収めるためのもの。ヒント文と重ならない位置）
@@ -812,7 +817,7 @@ public class MainGame : MonoBehaviour
         var qrt = quitBtn.GetComponent<RectTransform>();
         qrt.anchorMin = new Vector2(0.5f, 1); qrt.anchorMax = new Vector2(0.5f, 1);
         qrt.pivot = new Vector2(0.5f, 1); qrt.anchoredPosition = new Vector2(0, -436);
-        MkLabelA(pt, "Prototype 2 v19 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, 1, 0, TextAnchor.UpperRight);
+        MkLabelA(pt, "Prototype 2 v20 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, 1, 0, TextAnchor.UpperRight);
     }
 
     private Dictionary<string, object> CharForStage(string stageId)
@@ -1276,8 +1281,8 @@ public class MainGame : MonoBehaviour
             string catId = def.Key;
             float tw = def.Value.Length * 18f + 28f;
             // タブが横に収まらない場合は2行目に折り返す（検索欄と重ねない）
-            if (x > 0f && x + tw > 690f) { x = 0f; ty += 34f; }
-            var tab = MkButton(tabsArea, def.Value, 15, x, ty, tw, 30, () =>
+            if (x > 0f && x + tw > 690f) { x = 0f; ty += 30f; }
+            var tab = MkButton(tabsArea, def.Value, 15, x, ty, tw, 28, () =>
             {
                 activeCategory = catId;
                 palettePage = 0;
@@ -1300,9 +1305,12 @@ public class MainGame : MonoBehaviour
         {
             var img = kv.Value.GetComponent<Image>();
             if (img == null) continue;
-            img.color = kv.Key == activeCategory
-                ? new Color(0.36f, 0.42f, 0.62f, 1f)
+            bool active = kv.Key == activeCategory;
+            img.color = active
+                ? new Color(0.30f, 0.55f, 0.33f, 1f)
                 : new Color(0.16f, 0.17f, 0.26f, 1f);
+            var lab = kv.Value.GetComponentInChildren<Text>();
+            if (lab != null) lab.color = active ? Color.white : new Color(0.72f, 0.74f, 0.84f, 1f);
         }
     }
 
@@ -1347,9 +1355,9 @@ public class MainGame : MonoBehaviour
             }
         }
         else if (!paletteGroups.TryGetValue(activeCategory, out items)) return;
-        // 1ページは最大32語（8列×4行）。それ以上はページ送りし、ボタン同士が
-        // 縦に重なったりパレット／画面からはみ出したりしないようにする。
-        const int pageSize = 32;
+        // 1ページは最大24語（6列×4行）。単語を詰め込まず、ボタンと文字を
+        // 読みやすい大きさに保ち、超えた分はページ送りで表示する。
+        const int pageSize = 24;
         int pageCount = Mathf.Max(1, Mathf.CeilToInt(items.Count / (float)pageSize));
         palettePage = Mathf.Clamp(palettePage, 0, pageCount - 1);
         if (palettePageLabel != null)
@@ -1361,34 +1369,62 @@ public class MainGame : MonoBehaviour
             var c = J.Dict(co);
             catColors[J.GetStr(c, "id")] = J.GetStr(c, "color", "#ffffff");
         }
+        // 文章に選ばれている単語は、パレット側でも色を変えて示す
+        var selectedCounts = new Dictionary<string, int>();
+        foreach (var tok in selected)
+        {
+            string tt = J.GetStr(tok, "text");
+            int cc;
+            selectedCounts.TryGetValue(tt, out cc);
+            selectedCounts[tt] = cc + 1;
+        }
+        paletteButtons.Clear();
         int n = items.Count;
-        int cols = n <= 4 ? Math.Max(1, n) : (n <= 8 ? 4 : (n <= 12 ? 6 : 8));
+        int cols = n <= 2 ? Math.Max(1, n) : (n <= 6 ? 3 : 6);
         int rows = Mathf.Max(1, Mathf.CeilToInt(n / (float)cols));
         var paSize = ((RectTransform)paletteArea).sizeDelta;
         float cellW = paSize.x / cols;
-        float cellH = Mathf.Min(40f, paSize.y / rows);
-        // ボタン同士が縦に重ならないよう、行数が多いときはボタンと文字を小さくする
-        float bh = Mathf.Max(20f, cellH - 4f);
-        int wordFont = bh >= 34f ? 19 : (bh >= 27f ? 16 : 14);
+        float cellH = Mathf.Min(44f, paSize.y / rows);
+        float bh = Mathf.Max(24f, cellH - 6f);
+        int wordFont = bh >= 36f ? 20 : (bh >= 28f ? 17 : 15);
+        // ボタン幅は全てそろえ、間隔を均一にする
+        float bw = Mathf.Min(cellW - 10f, 300f);
         for (int idx = 0; idx < n; idx++)
         {
             var w = items[idx];
             string text = J.GetStr(w, "text");
             string hex;
             if (!catColors.TryGetValue(J.GetStr(w, "category"), out hex)) hex = "#ffffff";
-            Color col = Color.Lerp(HexColor(hex, Color.white), Color.white, 0.3f);
+            Color catCol = HexColor(hex, Color.white);
+            int selCount;
+            selectedCounts.TryGetValue(text, out selCount);
             var token = w;
             var b = MkButton(paletteArea, text, wordFont, 0, 0, 60, 34, () => AddWord(token));
+            paletteButtons.Add(new KeyValuePair<string, Button>(text, b));
+            var img = b.GetComponent<Image>();
+            img.color = selCount > 0 ? new Color(0.30f, 0.55f, 0.33f, 1f) : new Color(0.16f, 0.17f, 0.26f, 1f);
+            // ホバー時は明るく、押下時は少し暗くして、ボタンらしく反応させる
+            var bc = b.colors;
+            bc.highlightedColor = new Color(1.18f, 1.18f, 1.22f, 1f);
+            bc.pressedColor = new Color(0.72f, 0.72f, 0.8f, 1f);
+            bc.selectedColor = new Color(1.18f, 1.18f, 1.22f, 1f);
+            b.colors = bc;
             var label = b.GetComponentInChildren<Text>();
-            label.color = col;
-            float bw = Mathf.Min(cellW - 8f, Mathf.Max(label.preferredWidth + 42f, text.Length * 15f + 42f));
+            label.color = new Color(0.97f, 0.97f, 1f, 1f);
+            if (selCount >= 2) label.text = text + " ×" + selCount;
+            FitText(label, 14, wordFont);
             var rt = b.GetComponent<RectTransform>();
             rt.sizeDelta = new Vector2(bw, bh);
-            label.rectTransform.sizeDelta = new Vector2(bw, bh);
+            // 文字の領域は、左端の色帯と右端の星を避けた範囲にする
+            label.rectTransform.sizeDelta = new Vector2(bw - 34f, bh);
+            label.rectTransform.anchoredPosition = new Vector2(10f, 0f);
             float cx = (idx % cols) * cellW + (cellW - bw) / 2f;
             float cy = (idx / cols) * cellH + (cellH - bh) / 2f;
             rt.pivot = new Vector2(0.5f, 0.5f);
             rt.anchoredPosition = new Vector2(cx + bw / 2f, -(cy + bh / 2f));
+            // 左端の色帯でカテゴリーを示す
+            var stripe = MkRect(b.transform, catCol, 0, 4, 5, bh - 8);
+            stripe.raycastTarget = false;
             // 右端の星でお気に入りに登録/解除
             bool fav = favoriteWords.Contains(text);
             string wordText = text;
@@ -1397,6 +1433,31 @@ public class MainGame : MonoBehaviour
             star.GetComponent<Image>().color = new Color(0, 0, 0, 0);
             var sl = star.GetComponentInChildren<Text>();
             if (sl != null) sl.color = fav ? new Color(1f, 0.85f, 0.3f) : new Color(0.6f, 0.62f, 0.7f);
+        }
+    }
+
+    // 文章の選択状態を、パレットの単語ボタンの色・表示に反映する（再描画はしない）
+    private void RefreshPaletteSelection()
+    {
+        if (paletteButtons.Count == 0) return;
+        var counts = new Dictionary<string, int>();
+        foreach (var tok in selected)
+        {
+            string tt = J.GetStr(tok, "text");
+            int cc;
+            counts.TryGetValue(tt, out cc);
+            counts[tt] = cc + 1;
+        }
+        foreach (var kv in paletteButtons)
+        {
+            if (kv.Value == null) continue;
+            int c;
+            counts.TryGetValue(kv.Key, out c);
+            var img = kv.Value.GetComponent<Image>();
+            if (img != null)
+                img.color = c > 0 ? new Color(0.30f, 0.55f, 0.33f, 1f) : new Color(0.16f, 0.17f, 0.26f, 1f);
+            var lab = kv.Value.GetComponentInChildren<Text>();
+            if (lab != null) lab.text = c >= 2 ? kv.Key + " ×" + c : kv.Key;
         }
     }
 
@@ -1423,6 +1484,7 @@ public class MainGame : MonoBehaviour
 
     private void RefreshSentence()
     {
+        RefreshPaletteSelection();
         if (selected.Count == 0)
         {
             for (int i = chipsGroup.childCount - 1; i >= 0; i--)
@@ -1441,10 +1503,10 @@ public class MainGame : MonoBehaviour
     {
         for (int i = chipsGroup.childCount - 1; i >= 0; i--)
             Destroy(chipsGroup.GetChild(i).gameObject);
-        float chipH = compact ? 23f : 30f;
-        int font = compact ? 13 : 16;
-        float pitch = compact ? 25f : 34f;
-        float pad = compact ? 30f : 38f;
+        float chipH = compact ? 23f : 32f;
+        int font = compact ? 13 : 17;
+        float pitch = compact ? 25f : 36f;
+        float pad = compact ? 30f : 40f;
         float x = 0f, y = 0f;
         int row = 0;
         for (int i = 0; i < selected.Count; i++)
@@ -1461,7 +1523,7 @@ public class MainGame : MonoBehaviour
             if (i == selectedChip)
             {
                 var img = chip.GetComponent<Image>();
-                if (img != null) img.color = new Color(0.36f, 0.42f, 0.62f, 1f);
+                if (img != null) img.color = new Color(0.30f, 0.55f, 0.33f, 1f);
             }
             float delSize = compact ? 19f : 26f;
             var del = MkButton(chip.transform, "×", compact ? 11 : 14, cw - delSize - 2f, (chipH - delSize) / 2f, delSize, delSize, () =>
@@ -1473,7 +1535,7 @@ public class MainGame : MonoBehaviour
             del.GetComponent<Image>().color = new Color(0, 0, 0, 0);
             var dl = del.GetComponentInChildren<Text>();
             if (dl != null) dl.color = new Color(0.85f, 0.87f, 0.95f);
-            x += cw + 4f;
+            x += cw + 6f;
             if (x > 424f && i + 1 < selected.Count)
             {
                 x = 0f;
