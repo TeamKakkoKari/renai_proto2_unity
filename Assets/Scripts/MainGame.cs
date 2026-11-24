@@ -679,7 +679,7 @@ public class MainGame : MonoBehaviour
         MkLabel(pt, "〜 プロトタイプ2 〜　5つの地域で、ことばを組み合わせて物語を紡ごう", 20, new Color(0.9f, 0.93f, 1f), 0, 300, 1280, 30, TextAnchor.MiddleCenter);
         MkButton(pt, "▶ ゲームスタート", 26, 480, 356, 320, 64, ShowMap);
         MkButton(pt, "おわる", 16, 560, 436, 160, 40, () => Application.Quit());
-        MkLabel(pt, "Prototype 2 v17 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, TextAnchor.UpperRight);
+        MkLabel(pt, "Prototype 2 v18 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, TextAnchor.UpperRight);
     }
 
     private Dictionary<string, object> CharForStage(string stageId)

@@ -102,6 +102,14 @@
    },
    "stage_id": "forest",
    "portrait": "res://assets/lilia_art.png",
+   "expressions": {
+    "angry": "res://assets/lilia_angry.png",
+    "cry": "res://assets/lilia_cry.png",
+    "fun": "res://assets/lilia_fun.png",
+    "joy": "res://assets/lilia_joy.png",
+    "neutral": "res://assets/lilia_neutral.png",
+    "sad": "res://assets/lilia_sad.png"
+   },
    "accent": "#4e9a51",
    "turn_questions": [
     {
@@ -335,6 +343,14 @@
    },
    "stage_id": "savanna",
    "portrait": "res://assets/leo.png",
+   "expressions": {
+    "angry": "res://assets/leo_angry.png",
+    "cry": "res://assets/leo_cry.png",
+    "fun": "res://assets/leo_fun.png",
+    "joy": "res://assets/leo_joy.png",
+    "neutral": "res://assets/leo_neutral.png",
+    "sad": "res://assets/leo_sad.png"
+   },
    "accent": "#cf9a26",
    "turn_questions": [
     {
@@ -452,6 +468,14 @@
    },
    "stage_id": "city",
    "portrait": "res://assets/yui.png",
+   "expressions": {
+    "angry": "res://assets/yui_angry.png",
+    "cry": "res://assets/yui_cry.png",
+    "fun": "res://assets/yui_fun.png",
+    "joy": "res://assets/yui_joy.png",
+    "neutral": "res://assets/yui_neutral.png",
+    "sad": "res://assets/yui_sad.png"
+   },
    "accent": "#4a7fb5",
    "turn_questions": [
     {
