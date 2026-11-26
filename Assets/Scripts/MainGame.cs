@@ -817,7 +817,7 @@ public class MainGame : MonoBehaviour
         var qrt = quitBtn.GetComponent<RectTransform>();
         qrt.anchorMin = new Vector2(0.5f, 1); qrt.anchorMax = new Vector2(0.5f, 1);
         qrt.pivot = new Vector2(0.5f, 1); qrt.anchoredPosition = new Vector2(0, -436);
-        MkLabelA(pt, "Prototype 2 v20 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, 1, 0, TextAnchor.UpperRight);
+        MkLabelA(pt, "Prototype 2 v21 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, 1, 0, TextAnchor.UpperRight);
     }
 
     private Dictionary<string, object> CharForStage(string stageId)

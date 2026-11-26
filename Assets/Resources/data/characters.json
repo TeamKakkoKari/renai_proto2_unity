@@ -228,6 +228,14 @@
    },
    "stage_id": "mine",
    "portrait": "res://assets/grim.png",
+   "expressions": {
+    "angry": "res://assets/grim_angry.png",
+    "cry": "res://assets/grim_cry.png",
+    "fun": "res://assets/grim_fun.png",
+    "joy": "res://assets/grim_joy.png",
+    "neutral": "res://assets/grim_neutral.png",
+    "sad": "res://assets/grim_sad.png"
+   },
    "accent": "#b0722a",
    "turn_questions": [
     {
