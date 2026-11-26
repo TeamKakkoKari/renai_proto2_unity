@@ -379,6 +379,19 @@ public class MainGame : MonoBehaviour
         return rt;
     }
 
+    // v27: SetRect と同じ配置を、preserveLayout に関わらず必ず適用する。
+    // 吹き出しのレイアウトは、シーンの値や preserveLayout の状態に左右されては
+    // ならない。LayoutBubble() はこの関数だけを使って配置する。
+    private RectTransform SetRectForce(RectTransform rt, float x, float y, float w, float h)
+    {
+        rt.anchorMin = new Vector2(0, 1);
+        rt.anchorMax = new Vector2(0, 1);
+        rt.pivot = new Vector2(0, 1);
+        rt.anchoredPosition = new Vector2(x, -y);
+        rt.sizeDelta = new Vector2(w, h);
+        return rt;
+    }
+
 
     // アンカー基準の矩形設定。(ax, ay) は基準の隅: ax 0=左/1=右、ay 1=上/0=下。
     // x は基準の端からの内向き距離、y は上基準なら上から・下基準なら下からの距離。
@@ -583,8 +596,9 @@ public class MainGame : MonoBehaviour
         personalityLabel.transform.SetAsLastSibling();
         dialogueLabel.transform.SetAsLastSibling();
         if (nextButton != null) nextButton.transform.SetAsLastSibling();
-        // 吹き出し本体の位置もここで確定する（シーンの値が違っていても、文字とずれないように）
-        SetRect(bubblePanel.rectTransform, 16, 92, 388, bubblePanel.rectTransform.sizeDelta.y);
+        // 吹き出し本体の位置もここで確定する（シーンの値が違っていても、文字とずれないように）。
+        // v27: SetRectForce で、preserveLayout に関わらず必ず適用する。
+        SetRectForce(bubblePanel.rectTransform, 16, 92, 388, bubblePanel.rectTransform.sizeDelta.y);
         float boxW = 356f;
         float padX = 16f, padTop = 10f;
         float y = padTop; // 吹き出し内座標（上端からの距離）
@@ -593,7 +607,7 @@ public class MainGame : MonoBehaviour
         nameLabel.color = new Color(0.25f, 0.45f, 0.25f);
         nameLabel.horizontalOverflow = HorizontalWrapMode.Wrap;
         nameLabel.verticalOverflow = VerticalWrapMode.Truncate;
-        SetRect(nameLabel.rectTransform, padX, y, boxW, 28);
+        SetRectForce(nameLabel.rectTransform, padX, y, boxW, 28);
         y += 28f + 4f;
         float persH = 0f;
         if (personalityLabel.gameObject.activeSelf)
@@ -607,28 +621,31 @@ public class MainGame : MonoBehaviour
             personalityLabel.color = new Color(0.32f, 0.28f, 0.22f); // v25: シーン再利用時も濃い色に
             personalityLabel.horizontalOverflow = HorizontalWrapMode.Wrap;
             personalityLabel.verticalOverflow = VerticalWrapMode.Truncate;
-            SetRect(personalityLabel.rectTransform, padX, y, boxW, persH);
+            SetRectForce(personalityLabel.rectTransform, padX, y, boxW, persH);
             y += persH + 8f;
         }
         string dlg = string.IsNullOrEmpty(fullText) ? (dialogueLabel.text ?? "") : fullText;
-        int dlgFs = FitFontForBox(dlg, 22, 15, boxW, 4 * 22 * 1.32f);
+        // v27: セリフの最大行数を 4 -> 5 にする。最長のエンディング（57文字）は
+        // 4行でぎりぎりなので、文字幅の見積もり誤差で切れないよう余裕を持たせる。
+        // 吹き出しは最大で y92〜432（高さ340）まで伸び、パレット上端448より上に収まる。
+        int dlgFs = FitFontForBox(dlg, 22, 15, boxW, 5 * 22 * 1.32f);
         // v25: 人名（リーリア等）が行またぎで「リーリ／ア。」と割れないよう、
         // 割れる場合は1pxずつ縮小して、名前が1行に収まるフォントサイズにする。
         int guard = 0;
         while (dlgFs > 15 && NameSplitsAt(dlg, dlgFs, boxW) && guard < 7) { dlgFs--; guard++; }
-        int dlgLines = Mathf.Min(4, LinesFor(dlg, dlgFs, boxW));
+        int dlgLines = Mathf.Min(5, LinesFor(dlg, dlgFs, boxW));
         float dlgH = Mathf.Max(28f, dlgLines * dlgFs * 1.32f);
         dialogueLabel.resizeTextForBestFit = false;
         dialogueLabel.fontSize = dlgFs;
         dialogueLabel.horizontalOverflow = HorizontalWrapMode.Wrap;
         dialogueLabel.verticalOverflow = VerticalWrapMode.Truncate;
-        SetRect(dialogueLabel.rectTransform, padX, y, boxW, dlgH);
+        SetRectForce(dialogueLabel.rectTransform, padX, y, boxW, dlgH);
         y += dlgH + 8f;
         float bubbleH = y + 36f + 12f;
         bubblePanel.rectTransform.sizeDelta = new Vector2(388f, bubbleH);
         if (nextButton != null)
         {
-            SetRect(nextButton.GetComponent<RectTransform>(), 388f - 16f - 128f, bubbleH - 12f - 36f, 128f, 36f);
+            SetRectForce(nextButton.GetComponent<RectTransform>(), 388f - 16f - 128f, bubbleH - 12f - 36f, 128f, 36f);
             // v26: 次へボタンも白背景＋黒文字にする（クリーム色の吹き出しの上で、枠線つきで見える）
             var nimg = nextButton.GetComponent<Image>();
             if (nimg != null) nimg.color = new Color(1f, 1f, 1f, 1f);
@@ -1228,7 +1245,13 @@ public class MainGame : MonoBehaviour
             qrt.anchorMin = new Vector2(0.5f, 1); qrt.anchorMax = new Vector2(0.5f, 1);
             qrt.pivot = new Vector2(0.5f, 1); qrt.anchoredPosition = new Vector2(0, -436);
         }
-        MkLabelA(pt, "Prototype 2 v26 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, 1, 0, TextAnchor.UpperRight, "VersionLabel");
+        // v27: 版数ラベルは、シーン再利用時に MkLabel がテキストを設定しないため、
+        // シーン生成時（v22）の「Prototype 2 v22 (Unity版)」のまま残ってしまう。
+        // 戻り値の Text に直接テキストを入れて、実行中の版数を必ず表示する。
+        // これで、タイトル画面右下の版数を見れば、どの版のコードで動いているか分かる。
+        var versionLabel = MkLabelA(pt, "Prototype 2 v27 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, 1, 0, TextAnchor.UpperRight, "VersionLabel");
+        versionLabel.text = "Prototype 2 v27 (Unity版)";
+        versionLabel.fontSize = 13;
     }
 
     private Dictionary<string, object> CharForStage(string stageId)
@@ -1535,6 +1558,18 @@ public class MainGame : MonoBehaviour
     private void Update()
     {
         TickBlink();
+        // v27: 吹き出しの配置がずれているのを検出したら、すぐ直す安全網。
+        // シーンの値や他の処理でラベルの位置・幅・折り返しが戻ってしまっても、
+        // 次のフレームで LayoutBubble() が直す。表示中だけ確認する（軽い比較のみ）。
+        if (screen == "game" && bubblePanel != null && bubblePanel.gameObject.activeInHierarchy
+            && dialogueLabel != null
+            && (dialogueLabel.transform.parent != bubblePanel.transform
+                || dialogueLabel.rectTransform.sizeDelta.x != 356f
+                || dialogueLabel.horizontalOverflow != HorizontalWrapMode.Wrap
+                || dialogueLabel.resizeTextForBestFit))
+        {
+            LayoutBubble();
+        }
         if (typing)
         {
             typePos += TypeSpeed * Time.deltaTime;
@@ -1898,8 +1933,18 @@ public class MainGame : MonoBehaviour
         RenderPaletteGrid();
     }
 
+    // v27: 選べる単語は12個まで。無制限だと発言プレビューが3行（13pxで約90文字）に
+    // 収まらず「…」で切れ、チップもボタン列にはみ出す。12個あれば十分な長さの
+    // 文章が作れる（平均4文字×12語＝48文字）。上限に達したら、それ以上は選べない。
+    private const int MaxSelectedWords = 12;
     private void AddWord(Dictionary<string, object> token)
     {
+        if (selected.Count >= MaxSelectedWords)
+        {
+            if (resultLabel != null)
+                SetFittedText(resultLabel, "単語は12個までです。いらない単語はチップの × で消せます。", 13, 10);
+            return;
+        }
         selected.Add(new Dictionary<string, object>(token));
         selectedChip = selected.Count - 1;
         RefreshSentence();
@@ -2075,8 +2120,11 @@ public class MainGame : MonoBehaviour
         SetSpeaker(true);
         ShowDialogue("「" + reaction + "」", J.GetStr(currentChar, "name"));
         var reasons = res["reasons"] as List<string> ?? new List<string>();
+        // v27: 評価カードの結果欄は 168x112（13pxで約66文字）しかないため、
+        // 理由が5〜8個並ぶと「…」で切れてしまう。表示は先頭3件までにして、
+        // 全文はバックログに残す（LogLine は全理由を出す）。
         var rparts = new List<string>();
-        foreach (var r in reasons) rparts.Add("・" + r);
+        foreach (var r in reasons.GetRange(0, Mathf.Min(3, reasons.Count))) rparts.Add("・" + r);
         string head = "好感度 " + (delta >= 0 ? "+" + delta : delta.ToString()) + " → " + AffectionOf(cid)
             + " ｜ 面白さ " + (funDelta >= 0 ? "+" + funDelta : funDelta.ToString()) + " → " + FunOf(cid);
         if (isTimeout) head = "⏱ 時間切れで無言になってしまった… " + head;
