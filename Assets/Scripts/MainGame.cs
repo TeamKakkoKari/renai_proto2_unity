@@ -74,6 +74,7 @@ public class MainGame : MonoBehaviour
     private GameObject askGroup;
     private Text timerLabel;
     private Image timerBg;
+    private Image timerStripImg;
     private RectTransform timerFillRt;
     private float timerBarW = 944f;
     private Image timerFill;
@@ -101,6 +102,7 @@ public class MainGame : MonoBehaviour
     private Text mapInfoLabel;
     private Coroutine portraitAnim;
     private Sprite roundedSprite;
+    private Sprite buttonSprite;
     private Dictionary<string, Texture2D> texCache = new Dictionary<string, Texture2D>();
 
     private static readonly Dictionary<string, float[]> ZonePos = new Dictionary<string, float[]>
@@ -112,7 +114,7 @@ public class MainGame : MonoBehaviour
         { "savanna", new float[] { 0f, -32f } },
     };
     private const float MapOrtho = 118f;
-    private const float PortraitY = 56f; // v23: 上部帯(56px)分だけ立ち絵を下げる。シーンUIでは再生成時に反映
+    private const float PortraitY = 60f; // v25: 上部帯(60px)分だけ立ち絵を下げる。シーンUIでは再生成時に反映
 
     private string SavePath { get { return Path.Combine(Application.persistentDataPath, "affection.json"); } }
 
@@ -329,6 +331,34 @@ public class MainGame : MonoBehaviour
         return roundedSprite;
     }
 
+    // v25: 小さいボタン・ピル・帯用の角丸スプライト。角半径10px・ボーダー10px。
+    // RoundedSprite は角半径26px・ボーダー26pxで、上下合計52pxあるため、
+    // 高さ29〜54pxのボタンでは Sliced 描画が潰れて1pxの線にしかならず、
+    // ボタンの背景が消えて白文字がクリーム色のパネルに溶けていた（スクショで確認）。
+    // ボーダー合計20pxなら高さ28px以上の部品はすべて正しく描画される。
+    private Sprite ButtonSprite()
+    {
+        if (buttonSprite != null) return buttonSprite;
+        int s = 64, r = 10;
+        var tex = new Texture2D(s, s, TextureFormat.RGBA32, false);
+        var px = new Color32[s * s];
+        for (int y = 0; y < s; y++)
+        {
+            for (int x = 0; x < s; x++)
+            {
+                float qx = Mathf.Abs(x - (s - 1) / 2f) - (s / 2f - r);
+                float qy = Mathf.Abs(y - (s - 1) / 2f) - (s / 2f - r);
+                float d = Mathf.Sqrt(Mathf.Max(qx, 0f) * Mathf.Max(qx, 0f) + Mathf.Max(qy, 0f) * Mathf.Max(qy, 0f));
+                float a = Mathf.Clamp01(1f - d);
+                px[y * s + x] = new Color32(255, 255, 255, (byte)(a * 255f));
+            }
+        }
+        tex.SetPixels32(px);
+        tex.Apply();
+        buttonSprite = Sprite.Create(tex, new Rect(0, 0, s, s), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(r, r, r, r));
+        return buttonSprite;
+    }
+
     private RectTransform SetRect(RectTransform rt, float x, float y, float w, float h)
     {
         if (preserveLayout) return rt;
@@ -500,6 +530,25 @@ public class MainGame : MonoBehaviour
     }
 
 
+    // v25: 人名が1行の途中で割れるかどうかを調べる（行またぎ防止用）。
+    private bool NameSplitsAt(string text, int fs, float boxW)
+    {
+        if (string.IsNullOrEmpty(text)) return false;
+        int perLine = Mathf.Max(1, (int)(boxW / (fs * 1.08f)));
+        string[] names = { "リーリア", "グリム", "レオ", "ユイ", "ピピ" };
+        foreach (var n in names)
+        {
+            int i = text.IndexOf(n);
+            while (i >= 0)
+            {
+                int startCol = i % perLine;
+                if (startCol + n.Length > perLine) return true;
+                i = text.IndexOf(n, i + 1);
+            }
+        }
+        return false;
+    }
+
     // 吹き出しの高さを中身に合わせて組み直す（v22対応版）。
     // v22ではラベルは吹き出しの子ではなく FramePanel(pt) の子で、名前はシーン再利用のため
     // NameLabel / PersonalityLabel / DialogueLabel / NextButton のままにする。
@@ -508,7 +557,14 @@ public class MainGame : MonoBehaviour
     private void LayoutBubble()
     {
         if (bubblePanel == null || nameLabel == null || personalityLabel == null || dialogueLabel == null) return;
-        float boxW = 312f;
+        // v25: 吹き出し本体を一番下、名前・性格・セリフ・ボタンを上に置き直す。
+        // シーンで並び順が変わっていても、名前が吹き出しに隠れて消えないようにする。
+        bubblePanel.transform.SetAsFirstSibling();
+        nameLabel.transform.SetAsLastSibling();
+        personalityLabel.transform.SetAsLastSibling();
+        dialogueLabel.transform.SetAsLastSibling();
+        if (nextButton != null) nextButton.transform.SetAsLastSibling();
+        float boxW = 356f;
         float y = 102f; // 名前の上端（設計座標、吹き出し上端 92 + 10）
         SetRect(nameLabel.rectTransform, 32, y, boxW, 28);
         y += 28f + 4f;
@@ -516,16 +572,21 @@ public class MainGame : MonoBehaviour
         if (personalityLabel.gameObject.activeSelf)
         {
             string pers = personalityLabel.text ?? "";
-            int persFs = FitFontForBox(pers, 12, 10, boxW, 3 * 12 * 1.32f);
+            int persFs = FitFontForBox(pers, 13, 10, boxW, 3 * 13 * 1.32f);
             int persLines = Mathf.Min(3, LinesFor(pers, persFs, boxW));
             persH = Mathf.Max(15f, persLines * persFs * 1.32f);
             personalityLabel.resizeTextForBestFit = false;
             personalityLabel.fontSize = persFs;
+            personalityLabel.color = new Color(0.32f, 0.28f, 0.22f); // v25: シーン再利用時も濃い色に
             SetRect(personalityLabel.rectTransform, 32, y, boxW, persH);
             y += persH + 8f;
         }
         string dlg = string.IsNullOrEmpty(fullText) ? (dialogueLabel.text ?? "") : fullText;
         int dlgFs = FitFontForBox(dlg, 22, 15, boxW, 4 * 22 * 1.32f);
+        // v25: 人名（リーリア等）が行またぎで「リーリ／ア。」と割れないよう、
+        // 割れる場合は1pxずつ縮小して、名前が1行に収まるフォントサイズにする。
+        int guard = 0;
+        while (dlgFs > 15 && NameSplitsAt(dlg, dlgFs, boxW) && guard < 7) { dlgFs--; guard++; }
         int dlgLines = Mathf.Min(4, LinesFor(dlg, dlgFs, boxW));
         float dlgH = Mathf.Max(28f, dlgLines * dlgFs * 1.32f);
         dialogueLabel.resizeTextForBestFit = false;
@@ -533,7 +594,7 @@ public class MainGame : MonoBehaviour
         SetRect(dialogueLabel.rectTransform, 32, y, boxW, dlgH);
         y += dlgH + 8f;
         float bubbleH = (y + 36f + 12f) - 92f;
-        bubblePanel.rectTransform.sizeDelta = new Vector2(344f, bubbleH);
+        bubblePanel.rectTransform.sizeDelta = new Vector2(388f, bubbleH);
         if (nextButton != null)
             SetRect(nextButton.GetComponent<RectTransform>(), 216, 92f + bubbleH - 48f, 128f, 36f);
     }
@@ -580,11 +641,19 @@ public class MainGame : MonoBehaviour
         if (found != null)
         {
             var ei = found.GetComponent<Image>();
-            return ei != null ? ei : found.gameObject.AddComponent<Image>();
+            if (ei == null) ei = found.gameObject.AddComponent<Image>();
+            // v25: シーン再利用時もスプライトだけは直す。シーンの RoundedSprite
+            // （ボーダー26px）は高さ80px未満のパネルで潰れるため、ButtonSprite に替える。
+            // 位置・大きさ・色はシーンの手動編集を尊重して変えない。
+            ei.sprite = (h < 80f) ? ButtonSprite() : RoundedSprite();
+            ei.type = Image.Type.Sliced;
+            return ei;
         }
         var go = NewObj(parent, objName ?? "Panel");
         var img = go.AddComponent<Image>();
-        img.sprite = RoundedSprite();
+        // v25: 高さ80px未満のパネル（上部帯・ピル等）は角半径の小さいスプライトを使う。
+        // RoundedSprite（ボーダー26px）だと高さが潰れて背景が1pxの線になる。
+        img.sprite = (h < 80f) ? ButtonSprite() : RoundedSprite();
         img.type = Image.Type.Sliced;
         img.color = color;
         SetRect(img.rectTransform, x, y, w, h);
@@ -710,24 +779,27 @@ public class MainGame : MonoBehaviour
             var eb = found.GetComponent<Button>();
             if (eb == null) eb = found.gameObject.AddComponent<Button>();
             if (eb.targetGraphic == null) eb.targetGraphic = found.GetComponent<Image>();
+            // v25: シーン再利用時もスプライトと遷移だけは直す。シーンの
+            // RoundedSprite（ボーダー26px）は小さいボタンで潰れ、ColorTint は
+            // 白でボタンの色を上書きしてしまう。位置・大きさ・色は変えない。
+            var eimg = found.GetComponent<Image>();
+            if (eimg != null) { eimg.sprite = ButtonSprite(); eimg.type = Image.Type.Sliced; }
+            eb.transition = Selectable.Transition.None;
             if (onClick != null) eb.onClick.AddListener(() => { Deselect(); onClick(); });
             return eb;
         }
         var go = NewObj(parent, objName ?? "Button");
         var img = go.AddComponent<Image>();
-        img.sprite = RoundedSprite();
+        img.sprite = ButtonSprite();
         img.type = Image.Type.Sliced;
         img.color = new Color(0.23f, 0.24f, 0.35f, 1f);
         SetRect(img.rectTransform, x, y, w, h);
         var btn = go.AddComponent<Button>();
         btn.targetGraphic = img;
-        var cb = btn.colors;
-        cb.normalColor = Color.white;
-        cb.highlightedColor = new Color(0.88f, 0.92f, 1f, 1f);
-        cb.pressedColor = new Color(0.7f, 0.74f, 0.88f, 1f);
-        cb.selectedColor = Color.white;
-        cb.disabledColor = new Color(0.45f, 0.45f, 0.5f, 0.55f);
-        btn.colors = cb;
+        // v25: Button の ColorTint は normalColor（白）で Image の色を上書きして
+        // しまうため、設定した紺色のボタンが白くなり、白文字が見えなくなっていた。
+        // 色は img.color で直接決め、選択状態も直接変えるので、遷移は使わない。
+        btn.transition = Selectable.Transition.None;
         var nav = btn.navigation;
         nav.mode = Navigation.Mode.None;
         btn.navigation = nav;
@@ -796,7 +868,7 @@ public class MainGame : MonoBehaviour
         bgArt.raycastTarget = false;
         bgArtGo.SetActive(false);
 
-        portraitBox = SetRect(FindOrNew(root, "PortraitBox").GetComponent<RectTransform>(), 450, PortraitY, 380, 656);
+        portraitBox = SetRect(FindOrNew(root, "PortraitBox").GetComponent<RectTransform>(), 450, PortraitY, 380, 652);
         // 立ち絵は画面上端の中央にアンカーする（横幅が変わっても中央を保つ）
         if (!preserveLayout)
         {
@@ -825,33 +897,33 @@ public class MainGame : MonoBehaviour
         var top = SetRect(FindOrNew(root, "TopBar").GetComponent<RectTransform>(), 0, 0, 1280, 720).transform;
         // v23: 上部に濃い帯を追加（タイトル/ピルが背景・立ち絵に浮かないように）。
         // 新規要素なので preserveLayout に関わらず帯の配置をここで確定する。
-        var topBand = MkPanelTopBand(top, new Color(0.05f, 0.06f, 0.12f, 0.88f), 56, "TopBand");
+        var topBand = MkPanelTopBand(top, new Color(0.05f, 0.06f, 0.12f, 0.95f), 60, "TopBand");
         topBand.raycastTarget = false;
         var tbRt = topBand.rectTransform;
         tbRt.anchorMin = new Vector2(0, 1); tbRt.anchorMax = new Vector2(1, 1);
-        tbRt.offsetMin = new Vector2(0, -56f); tbRt.offsetMax = Vector2.zero;
+        tbRt.offsetMin = new Vector2(0, -60f); tbRt.offsetMax = Vector2.zero;
         MkButton(top, "🗺 マップ", 16, 16, 8, 120, 40, ShowMap, "MapButton");
-        var titleLbl = MkLabel(top, "ことばを紡ぐ恋愛シミュレーション", 16, new Color(1, 1, 1, 0.85f), 148, 15, 420, 22, TextAnchor.UpperLeft, "GameTitleLabel");
+        var titleLbl = MkLabel(top, "ことばを紡ぐ恋愛シミュレーション", 18, new Color(1, 1, 1, 1f), 148, 14, 420, 26, TextAnchor.UpperLeft, "GameTitleLabel");
         titleLbl.raycastTarget = false;
         AddOutline(titleLbl, new Color(0, 0, 0, 0.55f), 1.5f);
-        var affPill = MkPanelA(top, new Color(0.08f, 0.08f, 0.14f, 0.78f), 588, 8, 240, 40, 1, 1, "AffectionPill");
+        var affPill = MkPanelA(top, new Color(0.08f, 0.08f, 0.14f, 0.88f), 588, 8, 240, 44, 1, 1, "AffectionPill");
         affPill.raycastTarget = false;
-        affectionLabel = MkLabel(affPill.transform, "", 14, new Color(1f, 0.88f, 0.92f), 10, 4, 220, 20, TextAnchor.UpperLeft, "AffectionLabel");
+        affectionLabel = MkLabel(affPill.transform, "", 15, new Color(1f, 1f, 1f), 10, 6, 220, 20, TextAnchor.UpperLeft, "AffectionLabel");
         affectionLabel.raycastTarget = false;
         AddOutline(affectionLabel, new Color(0, 0, 0, 0.45f), 1f);
-        var affBarBg = MkRect(affPill.transform, new Color(0, 0, 0, 0.45f), 10, 26, 220, 6, "AffectionBarBg");
+        var affBarBg = MkRect(affPill.transform, new Color(0, 0, 0, 0.45f), 10, 30, 220, 6, "AffectionBarBg");
         affBarBg.raycastTarget = false;
-        var affFill = MkRect(affPill.transform, new Color(0.45f, 0.9f, 0.55f), 10, 26, 220, 6, "AffectionBarFill");
+        var affFill = MkRect(affPill.transform, new Color(0.45f, 0.9f, 0.55f), 10, 30, 220, 6, "AffectionBarFill");
         affFill.raycastTarget = false;
         affFillRt = affFill.rectTransform;
-        var funPill = MkPanelA(top, new Color(0.08f, 0.08f, 0.14f, 0.78f), 836, 8, 240, 40, 1, 1, "FunPill");
+        var funPill = MkPanelA(top, new Color(0.08f, 0.08f, 0.14f, 0.88f), 836, 8, 240, 44, 1, 1, "FunPill");
         funPill.raycastTarget = false;
-        funLabel = MkLabel(funPill.transform, "", 14, new Color(1f, 0.92f, 0.65f), 10, 4, 220, 20, TextAnchor.UpperLeft, "FunLabel");
+        funLabel = MkLabel(funPill.transform, "", 15, new Color(1f, 1f, 1f), 10, 6, 220, 20, TextAnchor.UpperLeft, "FunLabel");
         funLabel.raycastTarget = false;
         AddOutline(funLabel, new Color(0, 0, 0, 0.45f), 1f);
-        var funBarBg = MkRect(funPill.transform, new Color(0, 0, 0, 0.45f), 10, 26, 220, 6, "FunBarBg");
+        var funBarBg = MkRect(funPill.transform, new Color(0, 0, 0, 0.45f), 10, 30, 220, 6, "FunBarBg");
         funBarBg.raycastTarget = false;
-        var funFill = MkRect(funPill.transform, new Color(1f, 0.75f, 0.3f), 10, 26, 220, 6, "FunBarFill");
+        var funFill = MkRect(funPill.transform, new Color(1f, 0.75f, 0.3f), 10, 30, 220, 6, "FunBarFill");
         funFill.raycastTarget = false;
         funFillRt = funFill.rectTransform;
         MkButtonA(top, "📖 思い出", 15, 1084, 8, 96, 40, ToggleBacklog, 1, 1, "BacklogButton");
@@ -866,12 +938,16 @@ public class MainGame : MonoBehaviour
 
     private void BuildTimerBar()
     {
+        // v25: タイマー文字とバーは、立ち絵や背景写真の上に直接置くと読めないため、
+        // 濃い帯の上にまとめて置く（帯は MkRect＝スプライト無しなので潰れない）。
+        timerStripImg = MkRectA(root, new Color(0.05f, 0.06f, 0.12f, 0.85f), 12, 402, 956, 48, 0, 0, "TimerStrip");
+        timerStripImg.raycastTarget = false;
         // 制限時間バーは単語パレットの真上に置く
-        timerLabel = MkLabelA(root, "", 16, new Color(1f, 0.95f, 0.85f), 16, 408, 300, 22, 0, 0, TextAnchor.UpperLeft, "TimerLabel");
+        timerLabel = MkLabelA(root, "", 17, new Color(1f, 0.95f, 0.85f), 16, 408, 300, 22, 0, 0, TextAnchor.UpperLeft, "TimerLabel");
         AddOutline(timerLabel, new Color(0, 0, 0, 0.55f), 1.5f);
-        timerBg = MkRectA(root, new Color(0.05f, 0.05f, 0.1f, 0.75f), 16, 434, 944, 10, 0, 0, "TimerBarBg");
+        timerBg = MkRectA(root, new Color(0.05f, 0.05f, 0.1f, 0.75f), 16, 436, 944, 12, 0, 0, "TimerBarBg");
         timerBg.raycastTarget = false;
-        var fill = MkRectA(root, new Color(0.45f, 0.9f, 0.5f), 16, 434, 944, 10, 0, 0, "TimerBarFill");
+        var fill = MkRectA(root, new Color(0.45f, 0.9f, 0.5f), 16, 436, 944, 12, 0, 0, "TimerBarFill");
         fill.raycastTarget = false;
         timerFill = fill;
         timerFillRt = fill.rectTransform;
@@ -893,12 +969,13 @@ public class MainGame : MonoBehaviour
         SetRect(miniGo.GetComponent<RectTransform>(), 16, 130, 76, 112);
         evalMini = GetOrAdd<RawImage>(miniGo);
         evalMini.raycastTarget = false;
-        resultLabel = MkLabel(ct, "", 13, new Color(0.32f, 0.28f, 0.22f), 104, 130, 168, 112, TextAnchor.UpperLeft, "EvalResultLabel");
+        resultLabel = MkLabel(ct, "", 13, new Color(0.25f, 0.22f, 0.18f), 104, 130, 168, 112, TextAnchor.UpperLeft, "EvalResultLabel");
         resultLabel.resizeTextForBestFit = false; // v23: SetFittedText() が文字量で決める
     }
 
     private void SetTimerVisible(bool v)
     {
+        if (timerStripImg != null) timerStripImg.gameObject.SetActive(v);
         timerLabel.gameObject.SetActive(v);
         timerBg.gameObject.SetActive(v);
         timerFill.gameObject.SetActive(v);
@@ -914,13 +991,14 @@ public class MainGame : MonoBehaviour
 
         // 左上の吹き出し
         // v23: 初期サイズは2行想定。実行時は LayoutBubble() が文字量に合わせて組み直す。
-        var bubble = MkPanel(pt, new Color(0.98f, 0.96f, 0.90f, 0.97f), 16, 92, 344, 212, "SpeechBubble");
+        var bubble = MkPanel(pt, new Color(0.98f, 0.96f, 0.90f, 0.97f), 16, 92, 388, 212, "SpeechBubble");
         bubble.raycastTarget = false;
         bubblePanel = bubble;
-        nameLabel = MkLabel(pt, "", 23, new Color(0.25f, 0.45f, 0.25f), 32, 102, 312, 28, TextAnchor.UpperLeft, "NameLabel");
-        personalityLabel = MkLabel(pt, "", 12, new Color(0.42f, 0.37f, 0.30f), 32, 132, 312, 32, TextAnchor.UpperLeft, "PersonalityLabel");
+        nameLabel = MkLabel(pt, "", 24, new Color(0.25f, 0.45f, 0.25f), 32, 102, 356, 28, TextAnchor.UpperLeft, "NameLabel");
+        AddOutline(nameLabel, new Color(1, 1, 1, 0.55f), 1f);
+        personalityLabel = MkLabel(pt, "", 13, new Color(0.32f, 0.28f, 0.22f), 32, 132, 356, 32, TextAnchor.UpperLeft, "PersonalityLabel");
         personalityLabel.resizeTextForBestFit = false;
-        dialogueLabel = MkLabel(pt, "", 22, new Color(0.22f, 0.18f, 0.14f), 32, 168, 312, 92, TextAnchor.UpperLeft, "DialogueLabel");
+        dialogueLabel = MkLabel(pt, "", 22, new Color(0.22f, 0.18f, 0.14f), 32, 168, 356, 92, TextAnchor.UpperLeft, "DialogueLabel");
         dialogueLabel.resizeTextForBestFit = false;
         AddShadowFx(dialogueLabel, new Color(0, 0, 0, 0.15f), 1f);
         nextButton = MkButton(pt, "つぎへ ▼", 16, 216, 264, 128, 36, OnNext, "NextButton");
@@ -932,7 +1010,8 @@ public class MainGame : MonoBehaviour
         var sayPanel = MkPanelA(at, new Color(0.10f, 0.11f, 0.18f, 0.96f), 800, 92, 464, 340, 1, 1, "SayPanel");
         sayPanelImg = sayPanel;
         sayPanel.raycastTarget = false;
-        MkLabelA(at, "✏ あなたの発言", 15, new Color(0.75f, 0.8f, 0.95f), 820, 106, 300, 20, 1, 1, TextAnchor.UpperLeft, "SayTitleLabel");
+        var sayTitle = MkLabelA(at, "✏ あなたの発言", 16, new Color(0.95f, 0.96f, 1f), 820, 106, 300, 20, 1, 1, TextAnchor.UpperLeft, "SayTitleLabel");
+        sayTitle.color = new Color(0.95f, 0.96f, 1f); // v25: シーン再利用時も色を直す
         var chipsBg = MkRectA(at, new Color(0, 0, 0, 0.20f), 816, 130, 432, 82, 1, 1, "ChipsBg");
         chipsBg.raycastTarget = false;
         chipsGroup = SetRectA(FindOrNew(at, "Chips").GetComponent<RectTransform>(), 1, 1, AnchorX(1, 820, 424), AnchorY(1, 134, 74), 424, 74);
@@ -948,19 +1027,21 @@ public class MainGame : MonoBehaviour
         sentenceLabel.resizeTextForBestFit = false; // v23: LayoutSentence() が文字量で決める
         AddOutline(sentenceLabel, new Color(0, 0, 0, 0.5f), 1f);
         speakButton = MkButtonA(at, "✨ 発言する ▶", 24, 820, 320, 424, 54, () => DoSpeak(false), 1, 1, "SpeakButton");
-        if (!preserveLayout) speakButton.GetComponent<Image>().color = new Color(0.32f, 0.58f, 0.34f);
+        speakButton.GetComponent<Image>().color = new Color(0.20f, 0.42f, 0.24f); // v25: 色だけはシーンでも上書きする（白文字のコントラストのため。位置・大きさは変えない）
         var palPanel = MkPanelA(at, new Color(0.98f, 0.96f, 0.90f, 0.97f), 16, 448, 944, 256, 0, 0, "PalettePanel");
         palPanel.raycastTarget = false;
         tabsArea = SetRectA(FindOrNew(at, "Tabs").GetComponent<RectTransform>(), 0, 0, 32, AnchorY(0, 456, 60), 690, 60);
         BuildSearchField(at, 734, 462, 210, 30);
         paletteArea = SetRectA(FindOrNew(at, "Palette").GetComponent<RectTransform>(), 0, 0, 32, AnchorY(0, 524, 140), 912, 140);
-        var hint = MkLabelA(at, "ⓘ 単語を選んで、自由に文章を作りましょう！", 13, new Color(0.5f, 0.46f, 0.4f), 32, 672, 700, 20, 0, 0, TextAnchor.UpperLeft, "PaletteHintLabel");
+        var hint = MkLabelA(at, "ⓘ 単語を選んで、自由に文章を作りましょう！", 14, new Color(0.32f, 0.28f, 0.22f), 32, 668, 700, 20, 0, 0, TextAnchor.UpperLeft, "PaletteHintLabel");
+        hint.color = new Color(0.32f, 0.28f, 0.22f); // v25: シーン再利用時も色を直す
         hint.raycastTarget = false;
         // パレットのページ送り（「すべて」103語を1画面に収めるためのもの。ヒント文と重ならない位置）
-        MkButtonA(at, "◀", 14, 760, 668, 36, 24, () => ChangePalettePage(-1), 0, 0, "PalettePrevButton");
-        palettePageLabel = MkLabelA(at, "1 / 1", 14, new Color(0.5f, 0.46f, 0.4f), 800, 668, 60, 24, 0, 0, TextAnchor.MiddleCenter, "PalettePageLabel");
+        MkButtonA(at, "◀", 14, 760, 664, 36, 24, () => ChangePalettePage(-1), 0, 0, "PalettePrevButton");
+        palettePageLabel = MkLabelA(at, "1 / 1", 14, new Color(0.32f, 0.28f, 0.22f), 800, 664, 60, 24, 0, 0, TextAnchor.MiddleCenter, "PalettePageLabel");
+        palettePageLabel.color = new Color(0.32f, 0.28f, 0.22f); // v25: シーン再利用時も色を直す
         palettePageLabel.raycastTarget = false;
-        MkButtonA(at, "▶", 14, 864, 668, 36, 24, () => ChangePalettePage(1), 0, 0, "PaletteNextButton");
+        MkButtonA(at, "▶", 14, 864, 664, 36, 24, () => ChangePalettePage(1), 0, 0, "PaletteNextButton");
         askGroup.SetActive(false);
     }
 
@@ -969,17 +1050,16 @@ public class MainGame : MonoBehaviour
         var go = FindOrNew(parent, "SearchField");
         SetRectA(go.GetComponent<RectTransform>(), 0, 0, x, AnchorY(0, y, h), w, h);
         var img = go.GetComponent<Image>();
-        if (img == null)
-        {
-            img = go.AddComponent<Image>();
-            img.sprite = RoundedSprite();
-            img.type = Image.Type.Sliced;
-            img.color = new Color(1f, 1f, 1f, 0.95f);
-        }
+        if (img == null) img = go.AddComponent<Image>();
+        // v25: シーン再利用時もスプライトを ButtonSprite に直す（RoundedSprite は高さ30pxで潰れる）。
+        img.sprite = ButtonSprite();
+        img.type = Image.Type.Sliced;
+        img.color = new Color(1f, 1f, 1f, 0.95f);
         var field = GetOrAdd<InputField>(go);
         var textComp = MkLabel(go.transform, "", 15, new Color(0.25f, 0.22f, 0.18f), 10, 0, w - 16, h, TextAnchor.MiddleLeft, "SearchText");
         textComp.supportRichText = false;
-        var ph = MkLabel(go.transform, "🔍 キーワードで検索", 14, new Color(0.55f, 0.52f, 0.48f), 10, 0, w - 16, h, TextAnchor.MiddleLeft, "SearchPlaceholder");
+        var ph = MkLabel(go.transform, "🔍 キーワードで検索", 14, new Color(0.35f, 0.32f, 0.28f), 10, 0, w - 16, h, TextAnchor.MiddleLeft, "SearchPlaceholder");
+        ph.color = new Color(0.35f, 0.32f, 0.28f); // v25: シーン再利用時も色を直す
         field.textComponent = textComp;
         field.placeholder = ph;
         field.onValueChanged.AddListener((string s) => { searchText = s; palettePage = 0; RenderPaletteGrid(); });
@@ -1099,7 +1179,7 @@ public class MainGame : MonoBehaviour
             qrt.anchorMin = new Vector2(0.5f, 1); qrt.anchorMax = new Vector2(0.5f, 1);
             qrt.pivot = new Vector2(0.5f, 1); qrt.anchoredPosition = new Vector2(0, -436);
         }
-        MkLabelA(pt, "Prototype 2 v24 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, 1, 0, TextAnchor.UpperRight, "VersionLabel");
+        MkLabelA(pt, "Prototype 2 v25 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, 1, 0, TextAnchor.UpperRight, "VersionLabel");
     }
 
     private Dictionary<string, object> CharForStage(string stageId)
@@ -1200,7 +1280,7 @@ public class MainGame : MonoBehaviour
         else bgArt.gameObject.SetActive(false);
         string p = J.GetStr(currentChar, "portrait");
         if (p != "") SetPortraitTex(LoadTex(p));
-        nameLabel.color = Color.Lerp(HexColor(J.GetStr(currentChar, "accent"), Color.white), new Color(0.12f, 0.16f, 0.10f), 0.55f);
+        nameLabel.color = Color.Lerp(HexColor(J.GetStr(currentChar, "accent"), Color.white), new Color(0.12f, 0.16f, 0.10f), 0.65f);
         if (evalAffLabel != null)
         {
             evalAffLabel.text = "♥ 好感度　―";
@@ -1217,8 +1297,8 @@ public class MainGame : MonoBehaviour
         portraitImg.texture = tex;
         if (evalMini != null) evalMini.texture = tex;
         if (tex == null) return;
-        // v23: 幅上限320 (was 380) で発言パネルの下に潜らないように。高さ上限は656 (PortraitY 56分)
-        float scale = Mathf.Min(320f / tex.width, 656f / tex.height);
+        // v23: 幅上限320 (was 380) で発言パネルの下に潜らないように。高さ上限は652 (PortraitY 60分)
+        float scale = Mathf.Min(320f / tex.width, 652f / tex.height);
         portraitImg.rectTransform.sizeDelta = new Vector2(tex.width * scale, tex.height * scale);
         portraitImg.rectTransform.anchoredPosition = Vector2.zero;
         portraitImg.rectTransform.localScale = Vector3.one;
@@ -1233,6 +1313,8 @@ public class MainGame : MonoBehaviour
         string hearts = "";
         int hcount = Mathf.Clamp(aff / 10, 0, 10);
         for (int i = 0; i < hcount; i++) hearts += "♥";
+        affectionLabel.color = Color.white; // v25: シーン再利用時も白文字に
+        funLabel.color = Color.white;
         affectionLabel.text = "♥ 好感度 " + aff + "/100";
         if (affFillRt != null) affFillRt.sizeDelta = new Vector2(220f * Mathf.Clamp01(aff / 100f), 6);
         if (funLabel != null) funLabel.text = "😊 面白さ " + FunOf(cid) + "/100";
@@ -1435,7 +1517,7 @@ public class MainGame : MonoBehaviour
         int sec = Mathf.CeilToInt(timeLeft);
         timerLabel.text = "⏱ 制限時間: 残り " + sec + " 秒";
         float ratio = timeLimit > 0f ? Mathf.Clamp01(timeLeft / timeLimit) : 0f;
-        timerFillRt.sizeDelta = new Vector2(timerBarW * ratio, 10);
+        timerFillRt.sizeDelta = new Vector2(timerBarW * ratio, 12);
         timerFill.color = Color.HSVToRGB(0.33f * ratio, 0.85f, 0.95f);
         timerLabel.color = sec <= 10 ? new Color(1f, 0.45f, 0.45f) : new Color(1f, 0.95f, 0.85f);
     }
@@ -1599,10 +1681,10 @@ public class MainGame : MonoBehaviour
             if (img == null) continue;
             bool active = kv.Key == activeCategory;
             img.color = active
-                ? new Color(0.30f, 0.55f, 0.33f, 1f)
+                ? new Color(0.20f, 0.42f, 0.24f, 1f)
                 : new Color(0.16f, 0.17f, 0.26f, 1f);
             var lab = kv.Value.GetComponentInChildren<Text>();
-            if (lab != null) lab.color = active ? Color.white : new Color(0.72f, 0.74f, 0.84f, 1f);
+            if (lab != null) lab.color = Color.white; // v25: 非選択タブも白文字に（薄い灰色は紺色の上で読めなかった）
         }
     }
 
@@ -1694,13 +1776,9 @@ public class MainGame : MonoBehaviour
             var b = MkButton(paletteArea, text, wordFont, 0, 0, 60, 34, () => AddWord(token));
             paletteButtons.Add(new KeyValuePair<string, Button>(text, b));
             var img = b.GetComponent<Image>();
-            img.color = selCount > 0 ? new Color(0.30f, 0.55f, 0.33f, 1f) : new Color(0.16f, 0.17f, 0.26f, 1f);
-            // ホバー時は明るく、押下時は少し暗くして、ボタンらしく反応させる
-            var bc = b.colors;
-            bc.highlightedColor = new Color(1.18f, 1.18f, 1.22f, 1f);
-            bc.pressedColor = new Color(0.72f, 0.72f, 0.8f, 1f);
-            bc.selectedColor = new Color(1.18f, 1.18f, 1.22f, 1f);
-            b.colors = bc;
+            img.color = selCount > 0 ? new Color(0.20f, 0.42f, 0.24f, 1f) : new Color(0.16f, 0.17f, 0.26f, 1f);
+            // v25: 1.0を超える色（1.18f）は白に潰れてボタンを白くしていたので削除。
+            // MkButton で遷移は None にしてあり、色は上の img.color がそのまま残る。
             var label = b.GetComponentInChildren<Text>();
             label.color = new Color(0.97f, 0.97f, 1f, 1f);
             if (selCount >= 2) label.text = text + " ×" + selCount;
@@ -1729,7 +1807,7 @@ public class MainGame : MonoBehaviour
             var star = MkButton(b.transform, fav ? "★" : "☆", ss < 26f ? 11 : 14, bw - ss - 2f, (bh - ss) / 2f, ss, ss, () => ToggleFavorite(wordText));
             star.GetComponent<Image>().color = new Color(0, 0, 0, 0);
             var sl = star.GetComponentInChildren<Text>();
-            if (sl != null) sl.color = fav ? new Color(1f, 0.85f, 0.3f) : new Color(0.6f, 0.62f, 0.7f);
+            if (sl != null) sl.color = fav ? new Color(1f, 0.85f, 0.3f) : new Color(0.78f, 0.80f, 0.88f);
         }
     }
 
@@ -1752,7 +1830,7 @@ public class MainGame : MonoBehaviour
             counts.TryGetValue(kv.Key, out c);
             var img = kv.Value.GetComponent<Image>();
             if (img != null)
-                img.color = c > 0 ? new Color(0.30f, 0.55f, 0.33f, 1f) : new Color(0.16f, 0.17f, 0.26f, 1f);
+                img.color = c > 0 ? new Color(0.20f, 0.42f, 0.24f, 1f) : new Color(0.16f, 0.17f, 0.26f, 1f);
             var lab = kv.Value.GetComponentInChildren<Text>();
             if (lab != null) lab.text = c >= 2 ? kv.Key + " ×" + c : kv.Key;
         }
@@ -1822,7 +1900,7 @@ public class MainGame : MonoBehaviour
             if (i == selectedChip)
             {
                 var img = chip.GetComponent<Image>();
-                if (img != null) img.color = new Color(0.30f, 0.55f, 0.33f, 1f);
+                if (img != null) img.color = new Color(0.20f, 0.42f, 0.24f, 1f);
             }
             float delSize = compact ? 19f : 26f;
             var del = MkButton(chip.transform, "×", compact ? 11 : 14, cw - delSize - 2f, (chipH - delSize) / 2f, delSize, delSize, () =>
