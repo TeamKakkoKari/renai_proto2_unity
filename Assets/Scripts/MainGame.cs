@@ -73,6 +73,9 @@ public class MainGame : MonoBehaviour
     private float timerBarW = 944f;
     private Image timerFill;
     private Text sentenceLabel;
+    private Image bubblePanel;
+    private Image sentenceBgImg;
+    private Image sayPanelImg;
     private RectTransform chipsGroup;
     private RectTransform tabsArea;
     private RectTransform paletteArea;
@@ -104,7 +107,7 @@ public class MainGame : MonoBehaviour
         { "savanna", new float[] { 0f, -32f } },
     };
     private const float MapOrtho = 118f;
-    private const float PortraitY = 8f;
+    private const float PortraitY = 56f; // v23: 上部帯(56px)分だけ立ち絵を下げる。シーンUIでは再生成時に反映
 
     private string SavePath { get { return Path.Combine(Application.persistentDataPath, "affection.json"); } }
 
@@ -422,6 +425,133 @@ public class MainGame : MonoBehaviour
         t.resizeTextMinSize = minSize;
         t.resizeTextMaxSize = maxSize;
     }
+    // ---------- v23: 文字量に応じた自動フィット（BestFitに頼らない） ----------
+    // スクリーンショットで確認された問題: Unityの BestFit は日本語の太字を
+    // 1行に詰めようとしてフォントを小さくし、枠幅より広い1行を作って枠外にはみ出す。
+    // そのため文字幅を自分で見積もり、フォントサイズと行数を先に決めてから代入する。
+    // 日本語の全角1文字はフォントサイズの約1.08倍、半角は約0.58倍として見積もる
+    // （M PLUS Rounded 1c Bold の実測に合わせた保守的な値。少し余裕を持たせてある）。
+    private float TextWidthPx(string text, int fontSize)
+    {
+        if (string.IsNullOrEmpty(text)) return 0f;
+        float w = 0f;
+        foreach (char c in text)
+        {
+            if (c == '\n') continue;
+            w += (c < 128) ? fontSize * 0.58f : fontSize * 1.08f;
+        }
+        return w;
+    }
+
+    private int LinesFor(string text, int fontSize, float boxW)
+    {
+        if (string.IsNullOrEmpty(text)) return 1;
+        if (boxW <= 0f) return 1;
+        int lines = 0;
+        foreach (string part in text.Split('\n'))
+        {
+            float w = TextWidthPx(part, fontSize);
+            lines += Mathf.Max(1, Mathf.CeilToInt(w / boxW));
+        }
+        return Mathf.Max(1, lines);
+    }
+
+    // boxW x boxH に収まる最大のフォントサイズを返す（baseSize から minSize まで1pxずつ下げる）
+    private int FitFontForBox(string text, int baseSize, int minSize, float boxW, float boxH)
+    {
+        for (int fs = baseSize; fs >= minSize; fs--)
+        {
+            float lineH = fs * 1.32f;
+            if (LinesFor(text, fs, boxW) * lineH <= boxH) return fs;
+        }
+        return minSize;
+    }
+
+    // ラベルに文字を入れる唯一の入口（吹き出し・発言プレビュー・評価カード用）。
+    // BestFitは切る（BestFitを残すと Unity が勝手に縮小して1行化するため）。
+    // 収まらない場合は末尾を「…」で切り、枠外には絶対に出さない。
+    private int SetFittedText(Text t, string text, int baseSize, int minSize)
+    {
+        if (t == null) return baseSize;
+        t.resizeTextForBestFit = false;
+        t.horizontalOverflow = HorizontalWrapMode.Wrap;
+        t.verticalOverflow = VerticalWrapMode.Truncate;
+        var rt = t.rectTransform;
+        float boxW = rt.sizeDelta.x;
+        float boxH = rt.sizeDelta.y;
+        int fs = FitFontForBox(text, baseSize, minSize, boxW, boxH);
+        string shown = text ?? "";
+        if (LinesFor(shown, fs, boxW) * fs * 1.32f > boxH)
+        {
+            // 最小フォントでも収まらない: 入る分だけ残して「…」を付ける
+            int maxChars = Mathf.Max(1, (int)(boxW / (fs * 1.08f)) * Mathf.Max(1, (int)(boxH / (fs * 1.32f))));
+            if (shown.Length > maxChars) shown = shown.Substring(0, Mathf.Max(0, maxChars - 1)) + "…";
+        }
+        t.fontSize = fs;
+        t.text = shown;
+        if (LinesFor(shown, fs, boxW) * fs * 1.32f > boxH + 1f)
+            Debug.LogWarning("[UI] text still does not fit: " + shown + " in " + boxW + "x" + boxH + " @" + fs + "px");
+        return fs;
+    }
+
+
+    // 吹き出しの高さを中身に合わせて組み直す（v22対応版）。
+    // v22ではラベルは吹き出しの子ではなく FramePanel(pt) の子で、名前はシーン再利用のため
+    // NameLabel / PersonalityLabel / DialogueLabel / NextButton のままにする。
+    // 親を変えるとシーンに既にある同名ラベルが重複して残るため、親は変えない。
+    // LayoutBubble() は Awake 完了後（preserveLayout=false）にだけ呼ばれるので、SetRect は有効。
+    private void LayoutBubble()
+    {
+        if (bubblePanel == null || nameLabel == null || personalityLabel == null || dialogueLabel == null) return;
+        float boxW = 312f;
+        float y = 102f; // 名前の上端（設計座標、吹き出し上端 92 + 10）
+        SetRect(nameLabel.rectTransform, 32, y, boxW, 28);
+        y += 28f + 4f;
+        float persH = 0f;
+        if (personalityLabel.gameObject.activeSelf)
+        {
+            string pers = personalityLabel.text ?? "";
+            int persFs = FitFontForBox(pers, 12, 10, boxW, 3 * 12 * 1.32f);
+            int persLines = Mathf.Min(3, LinesFor(pers, persFs, boxW));
+            persH = Mathf.Max(15f, persLines * persFs * 1.32f);
+            personalityLabel.resizeTextForBestFit = false;
+            personalityLabel.fontSize = persFs;
+            SetRect(personalityLabel.rectTransform, 32, y, boxW, persH);
+            y += persH + 8f;
+        }
+        string dlg = string.IsNullOrEmpty(fullText) ? (dialogueLabel.text ?? "") : fullText;
+        int dlgFs = FitFontForBox(dlg, 22, 15, boxW, 4 * 22 * 1.32f);
+        int dlgLines = Mathf.Min(4, LinesFor(dlg, dlgFs, boxW));
+        float dlgH = Mathf.Max(28f, dlgLines * dlgFs * 1.32f);
+        dialogueLabel.resizeTextForBestFit = false;
+        dialogueLabel.fontSize = dlgFs;
+        SetRect(dialogueLabel.rectTransform, 32, y, boxW, dlgH);
+        y += dlgH + 8f;
+        float bubbleH = (y + 36f + 12f) - 92f;
+        bubblePanel.rectTransform.sizeDelta = new Vector2(344f, bubbleH);
+        if (nextButton != null)
+            SetRect(nextButton.GetComponent<RectTransform>(), 216, 92f + bubbleH - 48f, 128f, 36f);
+    }
+
+    // 発言プレビューの高さを文章量に合わせて組み直す（最大3行）。発言ボタンはその下にずらす。
+    private void LayoutSentence()
+    {
+        if (sentenceLabel == null || speakButton == null || sentenceBgImg == null || sayPanelImg == null) return;
+        float boxW = 424f;
+        string s = sentenceLabel.text ?? "";
+        int fs = FitFontForBox(s, 22, 13, boxW, 3 * 22 * 1.32f);
+        int lines = Mathf.Min(3, LinesFor(s, fs, boxW));
+        float h = Mathf.Max(34f, lines * fs * 1.32f);
+        sentenceLabel.resizeTextForBestFit = false;
+        sentenceLabel.fontSize = fs;
+        var srt = sentenceLabel.rectTransform;
+        srt.sizeDelta = new Vector2(boxW, h);
+        sentenceBgImg.rectTransform.sizeDelta = new Vector2(432f, h + 8f);
+        var brt = speakButton.GetComponent<RectTransform>();
+        float speakTop = 248f + (h + 8f) + 8f;
+        brt.anchoredPosition = new Vector2(brt.anchoredPosition.x, -speakTop);
+        brt.sizeDelta = new Vector2(424f, 54f);
+    }
 
     // 文字の縁取り（背景が写真・イラストでも読みやすくする）
     private void AddOutline(Text t, Color c, float d)
@@ -661,7 +791,7 @@ public class MainGame : MonoBehaviour
         bgArt.raycastTarget = false;
         bgArtGo.SetActive(false);
 
-        portraitBox = SetRect(FindOrNew(root, "PortraitBox").GetComponent<RectTransform>(), 450, PortraitY, 380, 712);
+        portraitBox = SetRect(FindOrNew(root, "PortraitBox").GetComponent<RectTransform>(), 450, PortraitY, 380, 656);
         // 立ち絵は画面上端の中央にアンカーする（横幅が変わっても中央を保つ）
         if (!preserveLayout)
         {
@@ -688,13 +818,20 @@ public class MainGame : MonoBehaviour
 
         // 上部: 浮いたピル型ステータス表示（参考画像風）
         var top = SetRect(FindOrNew(root, "TopBar").GetComponent<RectTransform>(), 0, 0, 1280, 720).transform;
+        // v23: 上部に濃い帯を追加（タイトル/ピルが背景・立ち絵に浮かないように）。
+        // 新規要素なので preserveLayout に関わらず帯の配置をここで確定する。
+        var topBand = MkPanelTopBand(top, new Color(0.05f, 0.06f, 0.12f, 0.88f), 56, "TopBand");
+        topBand.raycastTarget = false;
+        var tbRt = topBand.rectTransform;
+        tbRt.anchorMin = new Vector2(0, 1); tbRt.anchorMax = new Vector2(1, 1);
+        tbRt.offsetMin = new Vector2(0, -56f); tbRt.offsetMax = Vector2.zero;
         MkButton(top, "🗺 マップ", 16, 16, 8, 120, 40, ShowMap, "MapButton");
         var titleLbl = MkLabel(top, "ことばを紡ぐ恋愛シミュレーション", 16, new Color(1, 1, 1, 0.85f), 148, 15, 420, 22, TextAnchor.UpperLeft, "GameTitleLabel");
         titleLbl.raycastTarget = false;
         AddOutline(titleLbl, new Color(0, 0, 0, 0.55f), 1.5f);
         var affPill = MkPanelA(top, new Color(0.08f, 0.08f, 0.14f, 0.78f), 588, 8, 240, 40, 1, 1, "AffectionPill");
         affPill.raycastTarget = false;
-        affectionLabel = MkLabel(affPill.transform, "", 16, new Color(1f, 0.88f, 0.92f), 10, 4, 220, 20, TextAnchor.UpperLeft, "AffectionLabel");
+        affectionLabel = MkLabel(affPill.transform, "", 14, new Color(1f, 0.88f, 0.92f), 10, 4, 220, 20, TextAnchor.UpperLeft, "AffectionLabel");
         affectionLabel.raycastTarget = false;
         AddOutline(affectionLabel, new Color(0, 0, 0, 0.45f), 1f);
         var affBarBg = MkRect(affPill.transform, new Color(0, 0, 0, 0.45f), 10, 26, 220, 6, "AffectionBarBg");
@@ -704,7 +841,7 @@ public class MainGame : MonoBehaviour
         affFillRt = affFill.rectTransform;
         var funPill = MkPanelA(top, new Color(0.08f, 0.08f, 0.14f, 0.78f), 836, 8, 240, 40, 1, 1, "FunPill");
         funPill.raycastTarget = false;
-        funLabel = MkLabel(funPill.transform, "", 16, new Color(1f, 0.92f, 0.65f), 10, 4, 220, 20, TextAnchor.UpperLeft, "FunLabel");
+        funLabel = MkLabel(funPill.transform, "", 14, new Color(1f, 0.92f, 0.65f), 10, 4, 220, 20, TextAnchor.UpperLeft, "FunLabel");
         funLabel.raycastTarget = false;
         AddOutline(funLabel, new Color(0, 0, 0, 0.45f), 1f);
         var funBarBg = MkRect(funPill.transform, new Color(0, 0, 0, 0.45f), 10, 26, 220, 6, "FunBarBg");
@@ -752,7 +889,7 @@ public class MainGame : MonoBehaviour
         evalMini = GetOrAdd<RawImage>(miniGo);
         evalMini.raycastTarget = false;
         resultLabel = MkLabel(ct, "", 13, new Color(0.32f, 0.28f, 0.22f), 104, 130, 168, 112, TextAnchor.UpperLeft, "EvalResultLabel");
-        FitText(resultLabel, 10, 13);
+        resultLabel.resizeTextForBestFit = false; // v23: SetFittedText() が文字量で決める
     }
 
     private void SetTimerVisible(bool v)
@@ -771,21 +908,24 @@ public class MainGame : MonoBehaviour
         var pt = panel.transform;
 
         // 左上の吹き出し
-        var bubble = MkPanel(pt, new Color(0.98f, 0.96f, 0.90f, 0.97f), 16, 92, 344, 196, "SpeechBubble");
+        // v23: 初期サイズは2行想定。実行時は LayoutBubble() が文字量に合わせて組み直す。
+        var bubble = MkPanel(pt, new Color(0.98f, 0.96f, 0.90f, 0.97f), 16, 92, 344, 212, "SpeechBubble");
         bubble.raycastTarget = false;
+        bubblePanel = bubble;
         nameLabel = MkLabel(pt, "", 23, new Color(0.25f, 0.45f, 0.25f), 32, 102, 312, 28, TextAnchor.UpperLeft, "NameLabel");
-        personalityLabel = MkLabel(pt, "", 13, new Color(0.5f, 0.45f, 0.38f), 32, 132, 312, 18, TextAnchor.UpperLeft, "PersonalityLabel");
-        FitText(personalityLabel, 10, 13);
-        dialogueLabel = MkLabel(pt, "", 22, new Color(0.22f, 0.18f, 0.14f), 32, 154, 312, 92, TextAnchor.UpperLeft, "DialogueLabel");
-        FitText(dialogueLabel, 13, 22);
+        personalityLabel = MkLabel(pt, "", 12, new Color(0.42f, 0.37f, 0.30f), 32, 132, 312, 32, TextAnchor.UpperLeft, "PersonalityLabel");
+        personalityLabel.resizeTextForBestFit = false;
+        dialogueLabel = MkLabel(pt, "", 22, new Color(0.22f, 0.18f, 0.14f), 32, 168, 312, 92, TextAnchor.UpperLeft, "DialogueLabel");
+        dialogueLabel.resizeTextForBestFit = false;
         AddShadowFx(dialogueLabel, new Color(0, 0, 0, 0.15f), 1f);
-        nextButton = MkButton(pt, "つぎへ ▼", 16, 216, 240, 128, 36, OnNext, "NextButton");
+        nextButton = MkButton(pt, "つぎへ ▼", 16, 216, 264, 128, 36, OnNext, "NextButton");
 
         // 選択欄: 右の発言パネル＋下の単語パレット（参考画像の構成）
         askGroup = FindOrNew(pt, "AskGroup");
         SetRectStretch(askGroup.GetComponent<RectTransform>(), 0, 0, 0, 0);
         var at = askGroup.transform;
         var sayPanel = MkPanelA(at, new Color(0.10f, 0.11f, 0.18f, 0.96f), 800, 92, 464, 340, 1, 1, "SayPanel");
+        sayPanelImg = sayPanel;
         sayPanel.raycastTarget = false;
         MkLabelA(at, "✏ あなたの発言", 15, new Color(0.75f, 0.8f, 0.95f), 820, 106, 300, 20, 1, 1, TextAnchor.UpperLeft, "SayTitleLabel");
         var chipsBg = MkRectA(at, new Color(0, 0, 0, 0.20f), 816, 130, 432, 82, 1, 1, "ChipsBg");
@@ -796,12 +936,13 @@ public class MainGame : MonoBehaviour
         MkButtonA(at, "削除", 15, 908, 216, 64, 30, DeleteChip, 1, 1, "ChipDeleteButton");
         MkButtonA(at, "↩ 一つ戻す", 14, 976, 216, 118, 30, UndoLast, 1, 1, "ChipUndoButton");
         MkButtonA(at, "全解除", 15, 1098, 216, 146, 30, ClearSelected, 1, 1, "ChipClearButton");
-        var sentenceBg = MkRectA(at, new Color(1, 1, 1, 0.08f), 816, 248, 432, 42, 1, 1, "SentenceBg");
+        var sentenceBg = MkRectA(at, new Color(1, 1, 1, 0.08f), 816, 248, 432, 64, 1, 1, "SentenceBg");
+        sentenceBgImg = sentenceBg;
         sentenceBg.raycastTarget = false;
-        sentenceLabel = MkLabelA(at, "（まだ何も選んでいません）", 22, new Color(0.9f, 0.97f, 1f), 820, 252, 424, 34, 1, 1, TextAnchor.UpperLeft, "SentenceLabel");
-        FitText(sentenceLabel, 13, 22);
+        sentenceLabel = MkLabelA(at, "（まだ何も選んでいません）", 22, new Color(0.9f, 0.97f, 1f), 820, 252, 424, 56, 1, 1, TextAnchor.UpperLeft, "SentenceLabel");
+        sentenceLabel.resizeTextForBestFit = false; // v23: LayoutSentence() が文字量で決める
         AddOutline(sentenceLabel, new Color(0, 0, 0, 0.5f), 1f);
-        speakButton = MkButtonA(at, "✨ 発言する ▶", 24, 820, 296, 424, 54, () => DoSpeak(false), 1, 1, "SpeakButton");
+        speakButton = MkButtonA(at, "✨ 発言する ▶", 24, 820, 320, 424, 54, () => DoSpeak(false), 1, 1, "SpeakButton");
         if (!preserveLayout) speakButton.GetComponent<Image>().color = new Color(0.32f, 0.58f, 0.34f);
         var palPanel = MkPanelA(at, new Color(0.98f, 0.96f, 0.90f, 0.97f), 16, 448, 944, 256, 0, 0, "PalettePanel");
         palPanel.raycastTarget = false;
@@ -953,7 +1094,7 @@ public class MainGame : MonoBehaviour
             qrt.anchorMin = new Vector2(0.5f, 1); qrt.anchorMax = new Vector2(0.5f, 1);
             qrt.pivot = new Vector2(0.5f, 1); qrt.anchoredPosition = new Vector2(0, -436);
         }
-        MkLabelA(pt, "Prototype 2 v22 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, 1, 0, TextAnchor.UpperRight, "VersionLabel");
+        MkLabelA(pt, "Prototype 2 v23 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, 1, 0, TextAnchor.UpperRight, "VersionLabel");
     }
 
     private Dictionary<string, object> CharForStage(string stageId)
@@ -1071,7 +1212,8 @@ public class MainGame : MonoBehaviour
         portraitImg.texture = tex;
         if (evalMini != null) evalMini.texture = tex;
         if (tex == null) return;
-        float scale = Mathf.Min(380f / tex.width, 712f / tex.height);
+        // v23: 幅上限320 (was 380) で発言パネルの下に潜らないように。高さ上限は656 (PortraitY 56分)
+        float scale = Mathf.Min(320f / tex.width, 656f / tex.height);
         portraitImg.rectTransform.sizeDelta = new Vector2(tex.width * scale, tex.height * scale);
         portraitImg.rectTransform.anchoredPosition = Vector2.zero;
         portraitImg.rectTransform.localScale = Vector3.one;
@@ -1086,9 +1228,9 @@ public class MainGame : MonoBehaviour
         string hearts = "";
         int hcount = Mathf.Clamp(aff / 10, 0, 10);
         for (int i = 0; i < hcount; i++) hearts += "♥";
-        affectionLabel.text = "♥ 好感度 " + aff + " / 100";
+        affectionLabel.text = "♥ 好感度 " + aff + "/100";
         if (affFillRt != null) affFillRt.sizeDelta = new Vector2(220f * Mathf.Clamp01(aff / 100f), 6);
-        if (funLabel != null) funLabel.text = "😊 面白さ " + FunOf(cid) + " / 100";
+        if (funLabel != null) funLabel.text = "😊 面白さ " + FunOf(cid) + "/100";
         if (funFillRt != null) funFillRt.sizeDelta = new Vector2(220f * Mathf.Clamp01(FunOf(cid) / 100f), 6);
     }
 
@@ -1136,6 +1278,7 @@ public class MainGame : MonoBehaviour
             portraitImg.color = new Color(0.82f, 0.82f, 0.88f);
         }
         personalityLabel.text = J.GetStr(currentChar, "personality") + " / " + J.GetStr(currentStage, "description");
+        LayoutBubble();
     }
 
     private void ShowStoryBox()
@@ -1221,12 +1364,16 @@ public class MainGame : MonoBehaviour
         dialogueLabel.text = "";
         typePos = 0f;
         typing = true;
+        // v23: タイプライター表示中もフォントサイズと吹き出し高さは全文で決めて固定する
+        LayoutBubble();
         LogLine(speaker, text);
     }
 
     private void FinishTyping()
     {
         typing = false;
+        dialogueLabel.text = fullText;
+        LayoutBubble();
         dialogueLabel.text = fullText;
     }
 
@@ -1318,7 +1465,7 @@ public class MainGame : MonoBehaviour
         ShowDialogue("「" + J.GetStr(q, "text") + "」", J.GetStr(currentChar, "name"));
         nextButton.gameObject.SetActive(false);
         speakButton.interactable = true;
-        resultLabel.text = "単語を選んで文章を作りましょう。時間切れは無言 (-10) です。";
+        SetFittedText(resultLabel, "単語を選んで文章を作りましょう。時間切れは無言 (-10) です。", 13, 10);
         timeLeft = timeLimit;
         UpdateTimerUi();
         BuildPalette(OfferedWords(activeQuestion));
@@ -1551,7 +1698,12 @@ public class MainGame : MonoBehaviour
             var label = b.GetComponentInChildren<Text>();
             label.color = new Color(0.97f, 0.97f, 1f, 1f);
             if (selCount >= 2) label.text = text + " ×" + selCount;
-            FitText(label, 14, wordFont);
+            // v23: BestFitをやめ、文字量でフォントを決める。「×2」が入らない場合は回数表示を落とす
+            label.resizeTextForBestFit = false;
+            string labelText = label.text;
+            int pf = FitFontForBox(labelText, wordFont, 11, bw - 30f, bh);
+            if (LinesFor(labelText, pf, bw - 30f) * pf * 1.32f > bh) label.text = text;
+            label.fontSize = FitFontForBox(label.text, wordFont, 11, bw - 30f, bh);
             var rt = b.GetComponent<RectTransform>();
             rt.sizeDelta = new Vector2(bw, bh);
             // 文字の領域は、左端の色帯と右端の星を避けた範囲にする
@@ -1629,11 +1781,13 @@ public class MainGame : MonoBehaviour
             for (int i = chipsGroup.childCount - 1; i >= 0; i--)
                 Destroy(chipsGroup.GetChild(i).gameObject);
             sentenceLabel.text = "（まだ何も選んでいません）";
+            LayoutSentence();
             return;
         }
         var parts = new List<string>();
         foreach (var w in selected) parts.Add(J.GetStr(w, "text"));
         sentenceLabel.text = "「" + string.Join("", parts) + "」";
+        LayoutSentence();
         BuildChips(false);
     }
 
@@ -1790,12 +1944,13 @@ public class MainGame : MonoBehaviour
             head += " / 転換の言葉で次の話題が変わりそうだ";
         }
         personalityLabel.text = head;
+        LayoutBubble();
         if (evalAffLabel != null)
         {
             evalAffLabel.text = "♥ 好感度 " + (delta >= 0 ? "+" + delta : delta.ToString()) + " → " + AffectionOf(cid);
             evalFunLabel.text = "😊 面白さ " + (funDelta >= 0 ? "+" + funDelta : funDelta.ToString()) + " → " + FunOf(cid);
             evalTrustLabel.text = "🤝 信頼度 " + (trustDelta >= 0 ? "+" + trustDelta : trustDelta.ToString()) + " → " + TrustOf(cid);
-            resultLabel.text = string.Join(" ", rparts);
+            SetFittedText(resultLabel, string.Join(" ", rparts), 13, 10);
         }
         LogLine("評価", head + " " + string.Join(" ", rparts) + " ｜ 解析: " + ana.Summary());
         selected.Clear();
