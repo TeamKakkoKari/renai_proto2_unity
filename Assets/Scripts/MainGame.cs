@@ -552,6 +552,62 @@ public class MainGame : MonoBehaviour
     }
 
 
+    // v28: テキストを自分で改行する。Unity の Text は、シーンの値や BestFit の
+    // 残りで折り返さないことがある（ユーザーのスクショで確認：RectTransform は
+    // 正しいのに1行ではみ出した）。そこで、文字幅を測って適切な位置に "\n" を
+    // 入れ、Text の折り返し設定に依存せず、必ず複数行になるようにする。
+    // 既存の "\n" で先に分割するので、何度呼んでも同じ結果になる（冪等）。
+    // 人名（リーリア等）が行またぎで割れないよう、名前の途中で切らない。
+    // 行頭に「。」 「、」 「」」 「）」が来ないよう、禁則も避ける。
+    private string WrapText(string text, int fontSize, float boxW)
+    {
+        if (string.IsNullOrEmpty(text)) return text ?? "";
+        string[] names = new string[] { "リーリア", "グリム", "レオ", "ユイ", "ピピ" };
+        var sb = new System.Text.StringBuilder();
+        foreach (string part in text.Split('\n'))
+        {
+            if (sb.Length > 0) sb.Append('\n');
+            int i = 0;
+            while (i < part.Length)
+            {
+                float w = 0f;
+                int j = i;
+                while (j < part.Length)
+                {
+                    char c = part[j];
+                    float cw = (c < 128) ? fontSize * 0.58f : fontSize * 1.08f;
+                    if (w + cw > boxW && j > i) break;
+                    w += cw;
+                    j++;
+                }
+                // 人名の途中で切れそうなら、名前の直前で切る（名前全体を次行へ）。
+                foreach (string nm in names)
+                {
+                    int ni = part.IndexOf(nm, i);
+                    if (ni >= i && ni < j && ni + nm.Length > j)
+                    {
+                        if (ni > i) j = ni;
+                        break;
+                    }
+                }
+                // 禁則：次行の先頭が「。」 「、」 「」」 「）」なら、その文字も今行に入れる。
+                if (j < part.Length)
+                {
+                    char nc = part[j];
+                    if (nc == '。' || nc == '、' || nc == '」' || nc == '）' || nc == '』' || nc == '…')
+                    {
+                        float cw = (nc < 128) ? fontSize * 0.58f : fontSize * 1.08f;
+                        if (w + cw <= boxW * 1.06f) j++;
+                    }
+                }
+                sb.Append(part.Substring(i, j - i));
+                if (j < part.Length) sb.Append('\n');
+                i = j;
+            }
+        }
+        return sb.ToString();
+    }
+
     // v25: 人名が1行の途中で割れるかどうかを調べる（行またぎ防止用）。
     private bool NameSplitsAt(string text, int fs, float boxW)
     {
@@ -621,6 +677,8 @@ public class MainGame : MonoBehaviour
             personalityLabel.color = new Color(0.32f, 0.28f, 0.22f); // v25: シーン再利用時も濃い色に
             personalityLabel.horizontalOverflow = HorizontalWrapMode.Wrap;
             personalityLabel.verticalOverflow = VerticalWrapMode.Truncate;
+            // v28: 性格文も自分で改行する（折り返し設定に依存しない）。
+            personalityLabel.text = WrapText(pers, persFs, boxW);
             SetRectForce(personalityLabel.rectTransform, padX, y, boxW, persH);
             y += persH + 8f;
         }
@@ -635,6 +693,10 @@ public class MainGame : MonoBehaviour
         while (dlgFs > 15 && NameSplitsAt(dlg, dlgFs, boxW) && guard < 7) { dlgFs--; guard++; }
         int dlgLines = Mathf.Min(5, LinesFor(dlg, dlgFs, boxW));
         float dlgH = Mathf.Max(28f, dlgLines * dlgFs * 1.32f);
+        // v28: セリフも自分で改行して fullText に入れる。タイプライターは
+        // fullText を1文字ずつ出すので、改行も正しいタイミングで現れる。
+        // これで、Text の折り返し設定がどうなっていても、必ず複数行になる。
+        fullText = WrapText(dlg, dlgFs, boxW);
         dialogueLabel.resizeTextForBestFit = false;
         dialogueLabel.fontSize = dlgFs;
         dialogueLabel.horizontalOverflow = HorizontalWrapMode.Wrap;
@@ -1249,8 +1311,8 @@ public class MainGame : MonoBehaviour
         // シーン生成時（v22）の「Prototype 2 v22 (Unity版)」のまま残ってしまう。
         // 戻り値の Text に直接テキストを入れて、実行中の版数を必ず表示する。
         // これで、タイトル画面右下の版数を見れば、どの版のコードで動いているか分かる。
-        var versionLabel = MkLabelA(pt, "Prototype 2 v27 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, 1, 0, TextAnchor.UpperRight, "VersionLabel");
-        versionLabel.text = "Prototype 2 v27 (Unity版)";
+        var versionLabel = MkLabelA(pt, "Prototype 2 v28 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, 1, 0, TextAnchor.UpperRight, "VersionLabel");
+        versionLabel.text = "Prototype 2 v28 (Unity版)";
         versionLabel.fontSize = 13;
     }
 
