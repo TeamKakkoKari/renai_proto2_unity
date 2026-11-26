@@ -45,6 +45,8 @@ public class MainGame : MonoBehaviour
 
     private Font jpFont;
     private RectTransform root;
+    // シーンに生成済みのUIを使う間は、手動編集を尊重してレイアウトを上書きしない
+    private bool preserveLayout;
     private Image bgSky;
     private Image bgGround;
     private RawImage bgArt;
@@ -109,12 +111,61 @@ public class MainGame : MonoBehaviour
     // ---------- 起動・データ ----------
     private void Awake()
     {
+        EnsureEventSystem();
+        root = FindSceneRoot();
+        // シーンに生成済みのUIがあれば再利用し、その間はレイアウトを上書きしない
+        preserveLayout = root != null;
+        if (root == null) root = CreateCanvasRoot();
+        BuildAll();
+        preserveLayout = false;
+    }
+
+    // エディタの「RenaiProto2 > UIをシーンに生成」から呼ばれる。UI一式をシーン上に実体化する
+    public void BuildUiForEditor()
+    {
+        EnsureEventSystem();
+        root = FindSceneRoot();
+        if (root == null) root = CreateCanvasRoot();
+        preserveLayout = false;
+        BuildAll();
+    }
+
+    // エディタ生成時に混ざった動的部品（単語ボタン等）をシーンから取り除く
+    public void ClearDynamicChildrenForEditor()
+    {
+        ClearChildrenImmediate(paletteArea);
+        ClearChildrenImmediate(tabsArea);
+        ClearChildrenImmediate(chipsGroup);
+        ClearChildrenImmediate(backlogContent);
+    }
+
+    private void ClearChildrenImmediate(Transform t)
+    {
+        if (t == null) return;
+        for (int i = t.childCount - 1; i >= 0; i--)
+            DestroyImmediate(t.GetChild(i).gameObject);
+    }
+
+    private void EnsureEventSystem()
+    {
         if (FindObjectOfType<EventSystem>() == null)
         {
             var es = new GameObject("EventSystem");
             es.AddComponent<EventSystem>();
             es.AddComponent<StandaloneInputModule>();
         }
+    }
+
+    private RectTransform FindSceneRoot()
+    {
+        var c = GameObject.Find("Canvas");
+        if (c == null) return null;
+        var r = c.transform.Find("Root");
+        return r != null ? r.GetComponent<RectTransform>() : null;
+    }
+
+    private RectTransform CreateCanvasRoot()
+    {
         var canvasGo = new GameObject("Canvas");
         var canvas = canvasGo.AddComponent<Canvas>();
         canvas.renderMode = RenderMode.ScreenSpaceOverlay;
@@ -123,13 +174,17 @@ public class MainGame : MonoBehaviour
         scaler.referenceResolution = new Vector2(1280, 720);
         scaler.matchWidthOrHeight = 0.5f;
         canvasGo.AddComponent<GraphicRaycaster>();
-        root = new GameObject("Root").AddComponent<RectTransform>();
-        root.SetParent(canvas.transform, false);
-        root.anchorMin = Vector2.zero;
-        root.anchorMax = Vector2.one;
-        root.offsetMin = Vector2.zero;
-        root.offsetMax = Vector2.zero;
+        var rt = new GameObject("Root").AddComponent<RectTransform>();
+        rt.SetParent(canvas.transform, false);
+        rt.anchorMin = Vector2.zero;
+        rt.anchorMax = Vector2.one;
+        rt.offsetMin = Vector2.zero;
+        rt.offsetMax = Vector2.zero;
+        return rt;
+    }
 
+    private void BuildAll()
+    {
         jpFont = Resources.Load<Font>("fonts/MPLUSRounded1c-Bold");
         LoadData();
         LoadAffection();
@@ -268,6 +323,7 @@ public class MainGame : MonoBehaviour
 
     private RectTransform SetRect(RectTransform rt, float x, float y, float w, float h)
     {
+        if (preserveLayout) return rt;
         rt.anchorMin = new Vector2(0, 1);
         rt.anchorMax = new Vector2(0, 1);
         rt.pivot = new Vector2(0, 1);
@@ -282,6 +338,7 @@ public class MainGame : MonoBehaviour
     // 画面サイズが変わっても、要素が基準の端に張り付いたまま画面外へ出ないための仕組み。
     private RectTransform SetRectA(RectTransform rt, float ax, float ay, float x, float y, float w, float h)
     {
+        if (preserveLayout) return rt;
         rt.anchorMin = new Vector2(ax, ay);
         rt.anchorMax = new Vector2(ax, ay);
         rt.pivot = new Vector2(ax, ay);
@@ -293,6 +350,7 @@ public class MainGame : MonoBehaviour
     // 親いっぱいに広げる矩形設定（余白は 左, 上, 右, 下）
     private RectTransform SetRectStretch(RectTransform rt, float left, float top, float right, float bottom)
     {
+        if (preserveLayout) return rt;
         rt.anchorMin = Vector2.zero;
         rt.anchorMax = Vector2.one;
         rt.offsetMin = new Vector2(left, bottom);
@@ -312,9 +370,37 @@ public class MainGame : MonoBehaviour
         return go;
     }
 
-    private Text MkLabel(Transform parent, string text, int size, Color color, float x, float y, float w, float h, TextAnchor anchor = TextAnchor.UpperLeft)
+    // シーンに生成済みの同名オブジェクトがあれば再利用する（なければ新規作成）
+    private GameObject FindOrNew(Transform parent, string name)
     {
-        var go = NewObj(parent, "Label");
+        var t = parent.Find(name);
+        return t != null ? t.gameObject : NewObj(parent, name);
+    }
+
+    private Transform FindNamed(Transform parent, string name)
+    {
+        return name == null ? null : parent.Find(name);
+    }
+
+    private T GetOrAdd<T>(GameObject go) where T : Component
+    {
+        var c = go.GetComponent<T>();
+        return c != null ? c : go.AddComponent<T>();
+    }
+
+    private Text MkLabel(Transform parent, string text, int size, Color color, float x, float y, float w, float h, TextAnchor anchor = TextAnchor.UpperLeft, string objName = null)
+    {
+        var found = FindNamed(parent, objName);
+        if (found != null)
+        {
+            // シーン生成済みのラベルを再利用する（手動編集した見た目を尊重）
+            var et = found.GetComponent<Text>();
+            if (et == null) et = found.gameObject.AddComponent<Text>();
+            if (et.font == null) et.font = jpFont;
+            et.raycastTarget = false;
+            return et;
+        }
+        var go = NewObj(parent, objName ?? "Label");
         var t = go.AddComponent<Text>();
         t.font = jpFont;
         t.text = text;
@@ -340,7 +426,7 @@ public class MainGame : MonoBehaviour
     // 文字の縁取り（背景が写真・イラストでも読みやすくする）
     private void AddOutline(Text t, Color c, float d)
     {
-        var o = t.gameObject.AddComponent<Outline>();
+        var o = GetOrAdd<Outline>(t.gameObject);
         o.effectColor = c;
         o.effectDistance = new Vector2(d, -d);
     }
@@ -348,14 +434,20 @@ public class MainGame : MonoBehaviour
     // 文字の影（立体感と視認性の補助）
     private void AddShadowFx(Text t, Color c, float d)
     {
-        var s = t.gameObject.AddComponent<Shadow>();
-        s.effectColor = c;
-        s.effectDistance = new Vector2(d, -d);
+        var sh = GetOrAdd<Shadow>(t.gameObject);
+        sh.effectColor = c;
+        sh.effectDistance = new Vector2(d, -d);
     }
 
-    private Image MkPanel(Transform parent, Color color, float x, float y, float w, float h)
+    private Image MkPanel(Transform parent, Color color, float x, float y, float w, float h, string objName = null)
     {
-        var go = NewObj(parent, "Panel");
+        var found = FindNamed(parent, objName);
+        if (found != null)
+        {
+            var ei = found.GetComponent<Image>();
+            return ei != null ? ei : found.gameObject.AddComponent<Image>();
+        }
+        var go = NewObj(parent, objName ?? "Panel");
         var img = go.AddComponent<Image>();
         img.sprite = RoundedSprite();
         img.type = Image.Type.Sliced;
@@ -364,9 +456,15 @@ public class MainGame : MonoBehaviour
         return img;
     }
 
-    private Image MkRect(Transform parent, Color color, float x, float y, float w, float h)
+    private Image MkRect(Transform parent, Color color, float x, float y, float w, float h, string objName = null)
     {
-        var go = NewObj(parent, "Rect");
+        var found = FindNamed(parent, objName);
+        if (found != null)
+        {
+            var ei = found.GetComponent<Image>();
+            return ei != null ? ei : found.gameObject.AddComponent<Image>();
+        }
+        var go = NewObj(parent, objName ?? "Rect");
         var img = go.AddComponent<Image>();
         img.color = color;
         SetRect(img.rectTransform, x, y, w, h);
@@ -375,46 +473,47 @@ public class MainGame : MonoBehaviour
 
 
     // アンカー指定版（座標は通常版と同じ設計座標で渡す）
-    private Text MkLabelA(Transform parent, string text, int size, Color color, float x, float y, float w, float h, float ax, float ay, TextAnchor anchor = TextAnchor.UpperLeft)
+    private Text MkLabelA(Transform parent, string text, int size, Color color, float x, float y, float w, float h, float ax, float ay, TextAnchor anchor = TextAnchor.UpperLeft, string objName = null)
     {
-        var t = MkLabel(parent, text, size, color, x, y, w, h, anchor);
+        var t = MkLabel(parent, text, size, color, x, y, w, h, anchor, objName);
         SetRectA(t.rectTransform, ax, ay, AnchorX(ax, x, w), AnchorY(ay, y, h), w, h);
         return t;
     }
 
-    private Image MkPanelA(Transform parent, Color color, float x, float y, float w, float h, float ax, float ay)
+    private Image MkPanelA(Transform parent, Color color, float x, float y, float w, float h, float ax, float ay, string objName = null)
     {
-        var img = MkPanel(parent, color, x, y, w, h);
+        var img = MkPanel(parent, color, x, y, w, h, objName);
         SetRectA(img.rectTransform, ax, ay, AnchorX(ax, x, w), AnchorY(ay, y, h), w, h);
         return img;
     }
 
-    private Image MkRectA(Transform parent, Color color, float x, float y, float w, float h, float ax, float ay)
+    private Image MkRectA(Transform parent, Color color, float x, float y, float w, float h, float ax, float ay, string objName = null)
     {
-        var img = MkRect(parent, color, x, y, w, h);
+        var img = MkRect(parent, color, x, y, w, h, objName);
         SetRectA(img.rectTransform, ax, ay, AnchorX(ax, x, w), AnchorY(ay, y, h), w, h);
         return img;
     }
 
     // 全面に広がるパネル/矩形
-    private Image MkPanelStretch(Transform parent, Color color)
+    private Image MkPanelStretch(Transform parent, Color color, string objName = null)
     {
-        var img = MkPanel(parent, color, 0, 0, 1280, 720);
+        var img = MkPanel(parent, color, 0, 0, 1280, 720, objName);
         SetRectStretch(img.rectTransform, 0, 0, 0, 0);
         return img;
     }
 
-    private Image MkRectStretch(Transform parent, Color color)
+    private Image MkRectStretch(Transform parent, Color color, string objName = null)
     {
-        var img = MkRect(parent, color, 0, 0, 1280, 720);
+        var img = MkRect(parent, color, 0, 0, 1280, 720, objName);
         SetRectStretch(img.rectTransform, 0, 0, 0, 0);
         return img;
     }
 
     // 上端に張り付いて横いっぱいに広がる帯
-    private Image MkPanelTopBand(Transform parent, Color color, float height)
+    private Image MkPanelTopBand(Transform parent, Color color, float height, string objName = null)
     {
-        var img = MkPanel(parent, color, 0, 0, 1280, height);
+        var img = MkPanel(parent, color, 0, 0, 1280, height, objName);
+        if (preserveLayout) return img;
         var rt = img.rectTransform;
         rt.anchorMin = new Vector2(0, 1);
         rt.anchorMax = new Vector2(1, 1);
@@ -424,9 +523,10 @@ public class MainGame : MonoBehaviour
     }
 
     // 下端に張り付いて横いっぱいに広がる帯
-    private Image MkPanelBottomBand(Transform parent, Color color, float height)
+    private Image MkPanelBottomBand(Transform parent, Color color, float height, string objName = null)
     {
-        var img = MkPanel(parent, color, 0, 720 - height, 1280, height);
+        var img = MkPanel(parent, color, 0, 720 - height, 1280, height, objName);
+        if (preserveLayout) return img;
         var rt = img.rectTransform;
         rt.anchorMin = new Vector2(0, 0);
         rt.anchorMax = new Vector2(1, 0);
@@ -436,9 +536,10 @@ public class MainGame : MonoBehaviour
     }
 
     // 下端に張り付いて横いっぱいに広がる矩形
-    private Image MkRectBottomBand(Transform parent, Color color, float height)
+    private Image MkRectBottomBand(Transform parent, Color color, float height, string objName = null)
     {
-        var img = MkRect(parent, color, 0, 720 - height, 1280, height);
+        var img = MkRect(parent, color, 0, 720 - height, 1280, height, objName);
+        if (preserveLayout) return img;
         var rt = img.rectTransform;
         rt.anchorMin = new Vector2(0, 0);
         rt.anchorMax = new Vector2(1, 0);
@@ -448,9 +549,10 @@ public class MainGame : MonoBehaviour
     }
 
     // 横いっぱいに広がるラベル（中央寄せタイトルなど）
-    private Text MkLabelWide(Transform parent, string text, int size, Color color, float y, float h, TextAnchor anchor = TextAnchor.MiddleCenter)
+    private Text MkLabelWide(Transform parent, string text, int size, Color color, float y, float h, TextAnchor anchor = TextAnchor.MiddleCenter, string objName = null)
     {
-        var t = MkLabel(parent, text, size, color, 0, y, 1280, h, anchor);
+        var t = MkLabel(parent, text, size, color, 0, y, 1280, h, anchor, objName);
+        if (preserveLayout) return t;
         var rt = t.rectTransform;
         rt.anchorMin = new Vector2(0, 1);
         rt.anchorMax = new Vector2(1, 1);
@@ -464,9 +566,19 @@ public class MainGame : MonoBehaviour
         if (EventSystem.current != null) EventSystem.current.SetSelectedGameObject(null);
     }
 
-    private Button MkButton(Transform parent, string text, int fontSize, float x, float y, float w, float h, Action onClick)
+    private Button MkButton(Transform parent, string text, int fontSize, float x, float y, float w, float h, Action onClick, string objName = null)
     {
-        var go = NewObj(parent, "Button");
+        var found = FindNamed(parent, objName);
+        if (found != null)
+        {
+            // シーン生成済みのボタンを再利用する（クリック処理だけ付け直す）
+            var eb = found.GetComponent<Button>();
+            if (eb == null) eb = found.gameObject.AddComponent<Button>();
+            if (eb.targetGraphic == null) eb.targetGraphic = found.GetComponent<Image>();
+            if (onClick != null) eb.onClick.AddListener(() => { Deselect(); onClick(); });
+            return eb;
+        }
+        var go = NewObj(parent, objName ?? "Button");
         var img = go.AddComponent<Image>();
         img.sprite = RoundedSprite();
         img.type = Image.Type.Sliced;
@@ -484,23 +596,24 @@ public class MainGame : MonoBehaviour
         var nav = btn.navigation;
         nav.mode = Navigation.Mode.None;
         btn.navigation = nav;
-        var label = MkLabel(go.transform, text, fontSize, Color.white, 0, 0, w, h, TextAnchor.MiddleCenter);
+        var label = MkLabel(go.transform, text, fontSize, Color.white, 0, 0, w, h, TextAnchor.MiddleCenter, "Caption");
         label.horizontalOverflow = HorizontalWrapMode.Wrap;
         if (onClick != null) btn.onClick.AddListener(() => { Deselect(); onClick(); });
         return btn;
     }
 
 
-    private Button MkButtonA(Transform parent, string text, int fontSize, float x, float y, float w, float h, Action onClick, float ax, float ay)
+    private Button MkButtonA(Transform parent, string text, int fontSize, float x, float y, float w, float h, Action onClick, float ax, float ay, string objName = null)
     {
-        var btn = MkButton(parent, text, fontSize, x, y, w, h, onClick);
+        var btn = MkButton(parent, text, fontSize, x, y, w, h, onClick, objName);
         SetRectA(btn.GetComponent<RectTransform>(), ax, ay, AnchorX(ax, x, w), AnchorY(ay, y, h), w, h);
         return btn;
     }
 
     private void AddPointerDown(GameObject go, Action a)
     {
-        var et = go.AddComponent<EventTrigger>();
+        var et = GetOrAdd<EventTrigger>(go);
+        et.triggers.Clear();
         var entry = new EventTrigger.Entry { eventID = EventTriggerType.PointerDown };
         entry.callback.AddListener(delegate { a(); });
         et.triggers.Add(entry);
@@ -508,7 +621,8 @@ public class MainGame : MonoBehaviour
 
     private void AddPointerEnter(GameObject go, Action a)
     {
-        var et = go.AddComponent<EventTrigger>();
+        var et = GetOrAdd<EventTrigger>(go);
+        et.triggers.Clear();
         var entry = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
         entry.callback.AddListener(delegate { a(); });
         et.triggers.Add(entry);
@@ -538,61 +652,67 @@ public class MainGame : MonoBehaviour
     // ---------- 画面構築 ----------
     private void BuildUi()
     {
-        bgSky = MkRectStretch(root, Color.white);
+        bgSky = MkRectStretch(root, Color.white, "BgSky");
         bgSky.raycastTarget = false;
-        bgGround = MkRectBottomBand(root, Color.white, 160);
+        bgGround = MkRectBottomBand(root, Color.white, 160, "BgGround");
         bgGround.raycastTarget = false;
-        var bgArtGo = NewObj(root, "BgArt");
-        bgArt = bgArtGo.AddComponent<RawImage>();
+        var bgArtGo = FindOrNew(root, "BgArt");
+        bgArt = GetOrAdd<RawImage>(bgArtGo);
         bgArt.raycastTarget = false;
         bgArtGo.SetActive(false);
 
-        portraitBox = SetRect(NewObj(root, "PortraitBox").GetComponent<RectTransform>(), 450, PortraitY, 380, 712);
+        portraitBox = SetRect(FindOrNew(root, "PortraitBox").GetComponent<RectTransform>(), 450, PortraitY, 380, 712);
         // 立ち絵は画面上端の中央にアンカーする（横幅が変わっても中央を保つ）
-        portraitBox.anchorMin = new Vector2(0.5f, 1);
-        portraitBox.anchorMax = new Vector2(0.5f, 1);
-        portraitBox.pivot = new Vector2(0.5f, 1);
-        portraitBox.anchoredPosition = new Vector2(0, -PortraitY);
-        var pgo = NewObj(portraitBox, "Portrait");
-        portraitImg = pgo.AddComponent<RawImage>();
+        if (!preserveLayout)
+        {
+            portraitBox.anchorMin = new Vector2(0.5f, 1);
+            portraitBox.anchorMax = new Vector2(0.5f, 1);
+            portraitBox.pivot = new Vector2(0.5f, 1);
+            portraitBox.anchoredPosition = new Vector2(0, -PortraitY);
+        }
+        var pgo = FindOrNew(portraitBox, "Portrait");
+        portraitImg = GetOrAdd<RawImage>(pgo);
         portraitImg.raycastTarget = false;
         var prt = portraitImg.rectTransform;
-        prt.anchorMin = new Vector2(0.5f, 0.5f);
-        prt.anchorMax = new Vector2(0.5f, 0.5f);
-        prt.pivot = new Vector2(0.5f, 0.5f);
-        prt.anchoredPosition = Vector2.zero;
+        if (!preserveLayout)
+        {
+            prt.anchorMin = new Vector2(0.5f, 0.5f);
+            prt.anchorMax = new Vector2(0.5f, 0.5f);
+            prt.pivot = new Vector2(0.5f, 0.5f);
+            prt.anchoredPosition = Vector2.zero;
+        }
 
         // 全面クリックで進む（ボタン類より下の層に置く）
-        var catcher = MkRectStretch(root, new Color(0, 0, 0, 0));
+        var catcher = MkRectStretch(root, new Color(0, 0, 0, 0), "ClickCatcher");
         AddPointerDown(catcher.gameObject, OnClickAdvance);
 
         // 上部: 浮いたピル型ステータス表示（参考画像風）
-        var top = SetRect(NewObj(root, "TopBar").GetComponent<RectTransform>(), 0, 0, 1280, 720).transform;
-        MkButton(top, "🗺 マップ", 16, 16, 8, 120, 40, ShowMap);
-        var titleLbl = MkLabel(top, "ことばを紡ぐ恋愛シミュレーション", 16, new Color(1, 1, 1, 0.85f), 148, 15, 420, 22);
+        var top = SetRect(FindOrNew(root, "TopBar").GetComponent<RectTransform>(), 0, 0, 1280, 720).transform;
+        MkButton(top, "🗺 マップ", 16, 16, 8, 120, 40, ShowMap, "MapButton");
+        var titleLbl = MkLabel(top, "ことばを紡ぐ恋愛シミュレーション", 16, new Color(1, 1, 1, 0.85f), 148, 15, 420, 22, TextAnchor.UpperLeft, "GameTitleLabel");
         titleLbl.raycastTarget = false;
         AddOutline(titleLbl, new Color(0, 0, 0, 0.55f), 1.5f);
-        var affPill = MkPanelA(top, new Color(0.08f, 0.08f, 0.14f, 0.78f), 588, 8, 240, 40, 1, 1);
+        var affPill = MkPanelA(top, new Color(0.08f, 0.08f, 0.14f, 0.78f), 588, 8, 240, 40, 1, 1, "AffectionPill");
         affPill.raycastTarget = false;
-        affectionLabel = MkLabel(affPill.transform, "", 16, new Color(1f, 0.88f, 0.92f), 10, 4, 220, 20);
+        affectionLabel = MkLabel(affPill.transform, "", 16, new Color(1f, 0.88f, 0.92f), 10, 4, 220, 20, TextAnchor.UpperLeft, "AffectionLabel");
         affectionLabel.raycastTarget = false;
         AddOutline(affectionLabel, new Color(0, 0, 0, 0.45f), 1f);
-        var affBarBg = MkRect(affPill.transform, new Color(0, 0, 0, 0.45f), 10, 26, 220, 6);
+        var affBarBg = MkRect(affPill.transform, new Color(0, 0, 0, 0.45f), 10, 26, 220, 6, "AffectionBarBg");
         affBarBg.raycastTarget = false;
-        var affFill = MkRect(affPill.transform, new Color(0.45f, 0.9f, 0.55f), 10, 26, 220, 6);
+        var affFill = MkRect(affPill.transform, new Color(0.45f, 0.9f, 0.55f), 10, 26, 220, 6, "AffectionBarFill");
         affFill.raycastTarget = false;
         affFillRt = affFill.rectTransform;
-        var funPill = MkPanelA(top, new Color(0.08f, 0.08f, 0.14f, 0.78f), 836, 8, 240, 40, 1, 1);
+        var funPill = MkPanelA(top, new Color(0.08f, 0.08f, 0.14f, 0.78f), 836, 8, 240, 40, 1, 1, "FunPill");
         funPill.raycastTarget = false;
-        funLabel = MkLabel(funPill.transform, "", 16, new Color(1f, 0.92f, 0.65f), 10, 4, 220, 20);
+        funLabel = MkLabel(funPill.transform, "", 16, new Color(1f, 0.92f, 0.65f), 10, 4, 220, 20, TextAnchor.UpperLeft, "FunLabel");
         funLabel.raycastTarget = false;
         AddOutline(funLabel, new Color(0, 0, 0, 0.45f), 1f);
-        var funBarBg = MkRect(funPill.transform, new Color(0, 0, 0, 0.45f), 10, 26, 220, 6);
+        var funBarBg = MkRect(funPill.transform, new Color(0, 0, 0, 0.45f), 10, 26, 220, 6, "FunBarBg");
         funBarBg.raycastTarget = false;
-        var funFill = MkRect(funPill.transform, new Color(1f, 0.75f, 0.3f), 10, 26, 220, 6);
+        var funFill = MkRect(funPill.transform, new Color(1f, 0.75f, 0.3f), 10, 26, 220, 6, "FunBarFill");
         funFill.raycastTarget = false;
         funFillRt = funFill.rectTransform;
-        MkButtonA(top, "📖 思い出", 15, 1084, 8, 96, 40, ToggleBacklog, 1, 1);
+        MkButtonA(top, "📖 思い出", 15, 1084, 8, 96, 40, ToggleBacklog, 1, 1, "BacklogButton");
 
         BuildTimerBar();
         BuildFrame();
@@ -605,11 +725,11 @@ public class MainGame : MonoBehaviour
     private void BuildTimerBar()
     {
         // 制限時間バーは単語パレットの真上に置く
-        timerLabel = MkLabelA(root, "", 16, new Color(1f, 0.95f, 0.85f), 16, 408, 300, 22, 0, 0, TextAnchor.UpperLeft);
+        timerLabel = MkLabelA(root, "", 16, new Color(1f, 0.95f, 0.85f), 16, 408, 300, 22, 0, 0, TextAnchor.UpperLeft, "TimerLabel");
         AddOutline(timerLabel, new Color(0, 0, 0, 0.55f), 1.5f);
-        timerBg = MkRectA(root, new Color(0.05f, 0.05f, 0.1f, 0.75f), 16, 434, 944, 10, 0, 0);
+        timerBg = MkRectA(root, new Color(0.05f, 0.05f, 0.1f, 0.75f), 16, 434, 944, 10, 0, 0, "TimerBarBg");
         timerBg.raycastTarget = false;
-        var fill = MkRectA(root, new Color(0.45f, 0.9f, 0.5f), 16, 434, 944, 10, 0, 0);
+        var fill = MkRectA(root, new Color(0.45f, 0.9f, 0.5f), 16, 434, 944, 10, 0, 0, "TimerBarFill");
         fill.raycastTarget = false;
         timerFill = fill;
         timerFillRt = fill.rectTransform;
@@ -619,19 +739,19 @@ public class MainGame : MonoBehaviour
     private void BuildEvalCard()
     {
         // 右下の「今回の評価」カード（参考画像風）
-        var card = MkPanelA(root, new Color(0.98f, 0.96f, 0.90f, 0.97f), 976, 448, 288, 256, 1, 0);
+        var card = MkPanelA(root, new Color(0.98f, 0.96f, 0.90f, 0.97f), 976, 448, 288, 256, 1, 0, "EvalCard");
         card.raycastTarget = false;
         var ct = card.transform;
-        var title = MkLabel(ct, "✨ 今回の評価 ✨", 17, new Color(0.35f, 0.28f, 0.15f), 0, 10, 288, 24, TextAnchor.MiddleCenter);
+        var title = MkLabel(ct, "✨ 今回の評価 ✨", 17, new Color(0.35f, 0.28f, 0.15f), 0, 10, 288, 24, TextAnchor.MiddleCenter, "EvalTitle");
         title.raycastTarget = false;
-        evalAffLabel = MkLabel(ct, "♥ 好感度　―", 18, new Color(0.30f, 0.22f, 0.18f), 16, 42, 256, 24);
-        evalFunLabel = MkLabel(ct, "😊 面白さ　―", 18, new Color(0.30f, 0.22f, 0.18f), 16, 70, 256, 24);
-        evalTrustLabel = MkLabel(ct, "🤝 信頼度　―", 18, new Color(0.30f, 0.22f, 0.18f), 16, 98, 256, 24);
-        var miniGo = NewObj(ct, "EvalMini");
+        evalAffLabel = MkLabel(ct, "♥ 好感度　―", 18, new Color(0.30f, 0.22f, 0.18f), 16, 42, 256, 24, TextAnchor.UpperLeft, "EvalAffLabel");
+        evalFunLabel = MkLabel(ct, "😊 面白さ　―", 18, new Color(0.30f, 0.22f, 0.18f), 16, 70, 256, 24, TextAnchor.UpperLeft, "EvalFunLabel");
+        evalTrustLabel = MkLabel(ct, "🤝 信頼度　―", 18, new Color(0.30f, 0.22f, 0.18f), 16, 98, 256, 24, TextAnchor.UpperLeft, "EvalTrustLabel");
+        var miniGo = FindOrNew(ct, "EvalMini");
         SetRect(miniGo.GetComponent<RectTransform>(), 16, 130, 76, 112);
-        evalMini = miniGo.AddComponent<RawImage>();
+        evalMini = GetOrAdd<RawImage>(miniGo);
         evalMini.raycastTarget = false;
-        resultLabel = MkLabel(ct, "", 13, new Color(0.32f, 0.28f, 0.22f), 104, 130, 168, 112);
+        resultLabel = MkLabel(ct, "", 13, new Color(0.32f, 0.28f, 0.22f), 104, 130, 168, 112, TextAnchor.UpperLeft, "EvalResultLabel");
         FitText(resultLabel, 10, 13);
     }
 
@@ -645,71 +765,75 @@ public class MainGame : MonoBehaviour
     private void BuildFrame()
     {
         // 画面全体を覆う透明な土台（中身は吹き出し・発言パネル・単語パレットに分離）
-        var panel = MkPanelStretch(root, new Color(0, 0, 0, 0));
+        var panel = MkPanelStretch(root, new Color(0, 0, 0, 0), "FramePanel");
         panel.raycastTarget = false;
         msgPanel = panel.rectTransform;
         var pt = panel.transform;
 
         // 左上の吹き出し
-        var bubble = MkPanel(pt, new Color(0.98f, 0.96f, 0.90f, 0.97f), 16, 92, 344, 196);
+        var bubble = MkPanel(pt, new Color(0.98f, 0.96f, 0.90f, 0.97f), 16, 92, 344, 196, "SpeechBubble");
         bubble.raycastTarget = false;
-        nameLabel = MkLabel(pt, "", 23, new Color(0.25f, 0.45f, 0.25f), 32, 102, 312, 28);
-        personalityLabel = MkLabel(pt, "", 13, new Color(0.5f, 0.45f, 0.38f), 32, 132, 312, 18);
+        nameLabel = MkLabel(pt, "", 23, new Color(0.25f, 0.45f, 0.25f), 32, 102, 312, 28, TextAnchor.UpperLeft, "NameLabel");
+        personalityLabel = MkLabel(pt, "", 13, new Color(0.5f, 0.45f, 0.38f), 32, 132, 312, 18, TextAnchor.UpperLeft, "PersonalityLabel");
         FitText(personalityLabel, 10, 13);
-        dialogueLabel = MkLabel(pt, "", 22, new Color(0.22f, 0.18f, 0.14f), 32, 154, 312, 92);
+        dialogueLabel = MkLabel(pt, "", 22, new Color(0.22f, 0.18f, 0.14f), 32, 154, 312, 92, TextAnchor.UpperLeft, "DialogueLabel");
         FitText(dialogueLabel, 13, 22);
         AddShadowFx(dialogueLabel, new Color(0, 0, 0, 0.15f), 1f);
-        nextButton = MkButton(pt, "つぎへ ▼", 16, 216, 240, 128, 36, OnNext);
+        nextButton = MkButton(pt, "つぎへ ▼", 16, 216, 240, 128, 36, OnNext, "NextButton");
 
         // 選択欄: 右の発言パネル＋下の単語パレット（参考画像の構成）
-        askGroup = NewObj(pt, "AskGroup");
+        askGroup = FindOrNew(pt, "AskGroup");
         SetRectStretch(askGroup.GetComponent<RectTransform>(), 0, 0, 0, 0);
         var at = askGroup.transform;
-        var sayPanel = MkPanelA(at, new Color(0.10f, 0.11f, 0.18f, 0.96f), 800, 92, 464, 340, 1, 1);
+        var sayPanel = MkPanelA(at, new Color(0.10f, 0.11f, 0.18f, 0.96f), 800, 92, 464, 340, 1, 1, "SayPanel");
         sayPanel.raycastTarget = false;
-        MkLabelA(at, "✏ あなたの発言", 15, new Color(0.75f, 0.8f, 0.95f), 820, 106, 300, 20, 1, 1);
-        var chipsBg = MkRectA(at, new Color(0, 0, 0, 0.20f), 816, 130, 432, 82, 1, 1);
+        MkLabelA(at, "✏ あなたの発言", 15, new Color(0.75f, 0.8f, 0.95f), 820, 106, 300, 20, 1, 1, TextAnchor.UpperLeft, "SayTitleLabel");
+        var chipsBg = MkRectA(at, new Color(0, 0, 0, 0.20f), 816, 130, 432, 82, 1, 1, "ChipsBg");
         chipsBg.raycastTarget = false;
-        chipsGroup = SetRectA(NewObj(at, "Chips").GetComponent<RectTransform>(), 1, 1, AnchorX(1, 820, 424), AnchorY(1, 134, 74), 424, 74);
-        MkButtonA(at, "◀", 15, 820, 216, 40, 30, () => MoveChip(-1), 1, 1);
-        MkButtonA(at, "▶", 15, 864, 216, 40, 30, () => MoveChip(1), 1, 1);
-        MkButtonA(at, "削除", 15, 908, 216, 64, 30, DeleteChip, 1, 1);
-        MkButtonA(at, "↩ 一つ戻す", 14, 976, 216, 118, 30, UndoLast, 1, 1);
-        MkButtonA(at, "全解除", 15, 1098, 216, 146, 30, ClearSelected, 1, 1);
-        var sentenceBg = MkRectA(at, new Color(1, 1, 1, 0.08f), 816, 248, 432, 42, 1, 1);
+        chipsGroup = SetRectA(FindOrNew(at, "Chips").GetComponent<RectTransform>(), 1, 1, AnchorX(1, 820, 424), AnchorY(1, 134, 74), 424, 74);
+        MkButtonA(at, "◀", 15, 820, 216, 40, 30, () => MoveChip(-1), 1, 1, "ChipPrevButton");
+        MkButtonA(at, "▶", 15, 864, 216, 40, 30, () => MoveChip(1), 1, 1, "ChipNextButton");
+        MkButtonA(at, "削除", 15, 908, 216, 64, 30, DeleteChip, 1, 1, "ChipDeleteButton");
+        MkButtonA(at, "↩ 一つ戻す", 14, 976, 216, 118, 30, UndoLast, 1, 1, "ChipUndoButton");
+        MkButtonA(at, "全解除", 15, 1098, 216, 146, 30, ClearSelected, 1, 1, "ChipClearButton");
+        var sentenceBg = MkRectA(at, new Color(1, 1, 1, 0.08f), 816, 248, 432, 42, 1, 1, "SentenceBg");
         sentenceBg.raycastTarget = false;
-        sentenceLabel = MkLabelA(at, "（まだ何も選んでいません）", 22, new Color(0.9f, 0.97f, 1f), 820, 252, 424, 34, 1, 1);
+        sentenceLabel = MkLabelA(at, "（まだ何も選んでいません）", 22, new Color(0.9f, 0.97f, 1f), 820, 252, 424, 34, 1, 1, TextAnchor.UpperLeft, "SentenceLabel");
         FitText(sentenceLabel, 13, 22);
         AddOutline(sentenceLabel, new Color(0, 0, 0, 0.5f), 1f);
-        speakButton = MkButtonA(at, "✨ 発言する ▶", 24, 820, 296, 424, 54, () => DoSpeak(false), 1, 1);
-        speakButton.GetComponent<Image>().color = new Color(0.32f, 0.58f, 0.34f);
-        var palPanel = MkPanelA(at, new Color(0.98f, 0.96f, 0.90f, 0.97f), 16, 448, 944, 256, 0, 0);
+        speakButton = MkButtonA(at, "✨ 発言する ▶", 24, 820, 296, 424, 54, () => DoSpeak(false), 1, 1, "SpeakButton");
+        if (!preserveLayout) speakButton.GetComponent<Image>().color = new Color(0.32f, 0.58f, 0.34f);
+        var palPanel = MkPanelA(at, new Color(0.98f, 0.96f, 0.90f, 0.97f), 16, 448, 944, 256, 0, 0, "PalettePanel");
         palPanel.raycastTarget = false;
-        tabsArea = SetRectA(NewObj(at, "Tabs").GetComponent<RectTransform>(), 0, 0, 32, AnchorY(0, 456, 60), 690, 60);
+        tabsArea = SetRectA(FindOrNew(at, "Tabs").GetComponent<RectTransform>(), 0, 0, 32, AnchorY(0, 456, 60), 690, 60);
         BuildSearchField(at, 734, 462, 210, 30);
-        paletteArea = SetRectA(NewObj(at, "Palette").GetComponent<RectTransform>(), 0, 0, 32, AnchorY(0, 524, 140), 912, 140);
-        var hint = MkLabelA(at, "ⓘ 単語を選んで、自由に文章を作りましょう！", 13, new Color(0.5f, 0.46f, 0.4f), 32, 672, 700, 20, 0, 0);
+        paletteArea = SetRectA(FindOrNew(at, "Palette").GetComponent<RectTransform>(), 0, 0, 32, AnchorY(0, 524, 140), 912, 140);
+        var hint = MkLabelA(at, "ⓘ 単語を選んで、自由に文章を作りましょう！", 13, new Color(0.5f, 0.46f, 0.4f), 32, 672, 700, 20, 0, 0, TextAnchor.UpperLeft, "PaletteHintLabel");
         hint.raycastTarget = false;
         // パレットのページ送り（「すべて」103語を1画面に収めるためのもの。ヒント文と重ならない位置）
-        MkButtonA(at, "◀", 14, 760, 668, 36, 24, () => ChangePalettePage(-1), 0, 0);
-        palettePageLabel = MkLabelA(at, "1 / 1", 14, new Color(0.5f, 0.46f, 0.4f), 800, 668, 60, 24, 0, 0, TextAnchor.MiddleCenter);
+        MkButtonA(at, "◀", 14, 760, 668, 36, 24, () => ChangePalettePage(-1), 0, 0, "PalettePrevButton");
+        palettePageLabel = MkLabelA(at, "1 / 1", 14, new Color(0.5f, 0.46f, 0.4f), 800, 668, 60, 24, 0, 0, TextAnchor.MiddleCenter, "PalettePageLabel");
         palettePageLabel.raycastTarget = false;
-        MkButtonA(at, "▶", 14, 864, 668, 36, 24, () => ChangePalettePage(1), 0, 0);
+        MkButtonA(at, "▶", 14, 864, 668, 36, 24, () => ChangePalettePage(1), 0, 0, "PaletteNextButton");
         askGroup.SetActive(false);
     }
 
     private void BuildSearchField(Transform parent, float x, float y, float w, float h)
     {
-        var go = NewObj(parent, "SearchField");
+        var go = FindOrNew(parent, "SearchField");
         SetRectA(go.GetComponent<RectTransform>(), 0, 0, x, AnchorY(0, y, h), w, h);
-        var img = go.AddComponent<Image>();
-        img.sprite = RoundedSprite();
-        img.type = Image.Type.Sliced;
-        img.color = new Color(1f, 1f, 1f, 0.95f);
-        var field = go.AddComponent<InputField>();
-        var textComp = MkLabel(go.transform, "", 15, new Color(0.25f, 0.22f, 0.18f), 10, 0, w - 16, h, TextAnchor.MiddleLeft);
+        var img = go.GetComponent<Image>();
+        if (img == null)
+        {
+            img = go.AddComponent<Image>();
+            img.sprite = RoundedSprite();
+            img.type = Image.Type.Sliced;
+            img.color = new Color(1f, 1f, 1f, 0.95f);
+        }
+        var field = GetOrAdd<InputField>(go);
+        var textComp = MkLabel(go.transform, "", 15, new Color(0.25f, 0.22f, 0.18f), 10, 0, w - 16, h, TextAnchor.MiddleLeft, "SearchText");
         textComp.supportRichText = false;
-        var ph = MkLabel(go.transform, "🔍 キーワードで検索", 14, new Color(0.55f, 0.52f, 0.48f), 10, 0, w - 16, h, TextAnchor.MiddleLeft);
+        var ph = MkLabel(go.transform, "🔍 キーワードで検索", 14, new Color(0.55f, 0.52f, 0.48f), 10, 0, w - 16, h, TextAnchor.MiddleLeft, "SearchPlaceholder");
         field.textComponent = textComp;
         field.placeholder = ph;
         field.onValueChanged.AddListener((string s) => { searchText = s; palettePage = 0; RenderPaletteGrid(); });
@@ -723,43 +847,49 @@ public class MainGame : MonoBehaviour
 
     private void BuildBacklog()
     {
-        var panel = MkPanelStretch(root, new Color(0.03f, 0.03f, 0.08f, 0.96f));
+        var panel = MkPanelStretch(root, new Color(0.03f, 0.03f, 0.08f, 0.96f), "BacklogPanel");
         backlogPanel = panel.gameObject;
         var pt = panel.transform;
-        MkLabel(pt, "バックログ", 22, new Color(1f, 0.95f, 0.8f), 20, 14, 400, 30);
-        var scrollGo = NewObj(pt, "Scroll");
+        MkLabel(pt, "バックログ", 22, new Color(1f, 0.95f, 0.8f), 20, 14, 400, 30, TextAnchor.UpperLeft, "BacklogTitleLabel");
+        var scrollGo = FindOrNew(pt, "Scroll");
         SetRectStretch(scrollGo.GetComponent<RectTransform>(), 16, 52, 16, 72);
-        var scroll = scrollGo.AddComponent<ScrollRect>();
+        var scroll = GetOrAdd<ScrollRect>(scrollGo);
         scroll.horizontal = false;
         scroll.vertical = true;
         scroll.movementType = ScrollRect.MovementType.Clamped;
-        var viewport = NewObj(scrollGo.transform, "Viewport");
+        var viewport = FindOrNew(scrollGo.transform, "Viewport");
         var vrt = viewport.GetComponent<RectTransform>();
-        vrt.anchorMin = Vector2.zero;
-        vrt.anchorMax = Vector2.one;
-        vrt.offsetMin = Vector2.zero;
-        vrt.offsetMax = Vector2.zero;
-        var vimg = viewport.AddComponent<Image>();
-        vimg.color = new Color(1, 1, 1, 0.02f);
-        viewport.AddComponent<RectMask2D>();
-        var content = NewObj(viewport.transform, "Content");
+        if (!preserveLayout)
+        {
+            vrt.anchorMin = Vector2.zero;
+            vrt.anchorMax = Vector2.one;
+            vrt.offsetMin = Vector2.zero;
+            vrt.offsetMax = Vector2.zero;
+        }
+        var vimg = GetOrAdd<Image>(viewport);
+        if (!preserveLayout) vimg.color = new Color(1, 1, 1, 0.02f);
+        GetOrAdd<RectMask2D>(viewport);
+        var content = FindOrNew(viewport.transform, "Content");
         backlogContent = content.GetComponent<RectTransform>();
-        backlogContent.anchorMin = new Vector2(0, 1);
-        backlogContent.anchorMax = new Vector2(1, 1);
-        backlogContent.pivot = new Vector2(0.5f, 1);
-        backlogContent.anchoredPosition = Vector2.zero;
-        backlogContent.sizeDelta = new Vector2(0, 0);
-        var vlg = content.AddComponent<VerticalLayoutGroup>();
+        if (!preserveLayout)
+        {
+            backlogContent.anchorMin = new Vector2(0, 1);
+            backlogContent.anchorMax = new Vector2(1, 1);
+            backlogContent.pivot = new Vector2(0.5f, 1);
+            backlogContent.anchoredPosition = Vector2.zero;
+            backlogContent.sizeDelta = new Vector2(0, 0);
+        }
+        var vlg = GetOrAdd<VerticalLayoutGroup>(content);
         vlg.childControlWidth = true;
         vlg.childControlHeight = true;
         vlg.childForceExpandWidth = true;
         vlg.childForceExpandHeight = false;
         vlg.spacing = 4;
-        var fitter = content.AddComponent<ContentSizeFitter>();
+        var fitter = GetOrAdd<ContentSizeFitter>(content);
         fitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
         scroll.viewport = vrt;
         scroll.content = backlogContent;
-        MkButtonA(pt, "閉じる", 15, 16, 664, 120, 40, ToggleBacklog, 0, 0);
+        MkButtonA(pt, "閉じる", 15, 16, 664, 120, 40, ToggleBacklog, 0, 0, "BacklogCloseButton");
         backlogPanel.SetActive(false);
     }
 
@@ -797,27 +927,33 @@ public class MainGame : MonoBehaviour
 
     private void BuildTitleScreen()
     {
-        var panel = MkPanelStretch(root, new Color(0.05f, 0.08f, 0.16f, 1f));
+        var panel = MkPanelStretch(root, new Color(0.05f, 0.08f, 0.16f, 1f), "TitlePanel");
         titleScreen = panel.gameObject;
         var pt = panel.transform;
-        var bgGo = NewObj(pt, "TitleBg");
-        var bg = bgGo.AddComponent<RawImage>();
+        var bgGo = FindOrNew(pt, "TitleBg");
+        var bg = GetOrAdd<RawImage>(bgGo);
         bg.raycastTarget = false;
-        bg.color = new Color(0.55f, 0.55f, 0.6f, 1f);
+        if (!preserveLayout) bg.color = new Color(0.55f, 0.55f, 0.6f, 1f);
         SetCover(bg, LoadTex("res://assets/world_map_top.png"));
-        var dim = MkRectStretch(pt, new Color(0.03f, 0.04f, 0.1f, 0.45f));
+        var dim = MkRectStretch(pt, new Color(0.03f, 0.04f, 0.1f, 0.45f), "TitleDim");
         dim.raycastTarget = false;
-        MkLabelWide(pt, "ことばを紡ぐ恋愛シミュレーション", 52, new Color(1f, 0.97f, 0.9f), 218, 72);
-        MkLabelWide(pt, "〜 プロトタイプ2 〜　5つの地域で、ことばを組み合わせて物語を紡ごう", 20, new Color(0.9f, 0.93f, 1f), 300, 30);
-        var startBtn = MkButton(pt, "▶ ゲームスタート", 26, 480, 356, 320, 64, ShowMap);
-        var srt = startBtn.GetComponent<RectTransform>();
-        srt.anchorMin = new Vector2(0.5f, 1); srt.anchorMax = new Vector2(0.5f, 1);
-        srt.pivot = new Vector2(0.5f, 1); srt.anchoredPosition = new Vector2(0, -356);
-        var quitBtn = MkButton(pt, "おわる", 16, 560, 436, 160, 40, () => Application.Quit());
-        var qrt = quitBtn.GetComponent<RectTransform>();
-        qrt.anchorMin = new Vector2(0.5f, 1); qrt.anchorMax = new Vector2(0.5f, 1);
-        qrt.pivot = new Vector2(0.5f, 1); qrt.anchoredPosition = new Vector2(0, -436);
-        MkLabelA(pt, "Prototype 2 v21 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, 1, 0, TextAnchor.UpperRight);
+        MkLabelWide(pt, "ことばを紡ぐ恋愛シミュレーション", 52, new Color(1f, 0.97f, 0.9f), 218, 72, TextAnchor.MiddleCenter, "TitleMainLabel");
+        MkLabelWide(pt, "〜 プロトタイプ2 〜　5つの地域で、ことばを組み合わせて物語を紡ごう", 20, new Color(0.9f, 0.93f, 1f), 300, 30, TextAnchor.MiddleCenter, "TitleSubLabel");
+        var startBtn = MkButton(pt, "▶ ゲームスタート", 26, 480, 356, 320, 64, ShowMap, "TitleStartButton");
+        if (!preserveLayout)
+        {
+            var srt = startBtn.GetComponent<RectTransform>();
+            srt.anchorMin = new Vector2(0.5f, 1); srt.anchorMax = new Vector2(0.5f, 1);
+            srt.pivot = new Vector2(0.5f, 1); srt.anchoredPosition = new Vector2(0, -356);
+        }
+        var quitBtn = MkButton(pt, "おわる", 16, 560, 436, 160, 40, () => Application.Quit(), "TitleQuitButton");
+        if (!preserveLayout)
+        {
+            var qrt = quitBtn.GetComponent<RectTransform>();
+            qrt.anchorMin = new Vector2(0.5f, 1); qrt.anchorMax = new Vector2(0.5f, 1);
+            qrt.pivot = new Vector2(0.5f, 1); qrt.anchoredPosition = new Vector2(0, -436);
+        }
+        MkLabelA(pt, "Prototype 2 v22 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, 1, 0, TextAnchor.UpperRight, "VersionLabel");
     }
 
     private Dictionary<string, object> CharForStage(string stageId)
@@ -837,37 +973,40 @@ public class MainGame : MonoBehaviour
 
     private void BuildMapScreen()
     {
-        var panel = MkPanelStretch(root, new Color(0.4f, 0.55f, 0.75f, 1f));
+        var panel = MkPanelStretch(root, new Color(0.4f, 0.55f, 0.75f, 1f), "MapPanel");
         mapScreen = panel.gameObject;
         var pt = panel.transform;
-        var bgGo = NewObj(pt, "MapBg");
-        var bg = bgGo.AddComponent<RawImage>();
+        var bgGo = FindOrNew(pt, "MapBg");
+        var bg = GetOrAdd<RawImage>(bgGo);
         bg.raycastTarget = false;
         SetCover(bg, LoadTex("res://assets/world_map_top.png"));
-        var header = MkPanelTopBand(pt, new Color(0.05f, 0.06f, 0.12f, 0.82f), 56);
+        var header = MkPanelTopBand(pt, new Color(0.05f, 0.06f, 0.12f, 0.82f), 56, "MapHeader");
         header.raycastTarget = false;
-        MkLabel(header.transform, "🗺 行き先を選んでください", 22, Color.white, 20, 14, 800, 28);
-        MkButtonA(header.transform, "好感度リセット", 13, 996, 10, 132, 36, ResetAffection, 1, 1);
-        MkButtonA(header.transform, "タイトルへ", 15, 1140, 10, 120, 36, ShowTitle, 1, 1);
+        MkLabel(header.transform, "🗺 行き先を選んでください", 22, Color.white, 20, 14, 800, 28, TextAnchor.UpperLeft, "MapHeaderLabel");
+        MkButtonA(header.transform, "好感度リセット", 13, 996, 10, 132, 36, ResetAffection, 1, 1, "MapResetButton");
+        MkButtonA(header.transform, "タイトルへ", 15, 1140, 10, 120, 36, ShowTitle, 1, 1, "MapToTitleButton");
         foreach (var s in stages)
         {
             string sid = J.GetStr(s, "id");
             var ch = CharForStage(sid);
             string btnText = J.GetStr(s, "icon") + " " + J.GetStr(s, "name") + "\n" + J.GetStr(ch, "name");
             Vector2 ctr = RegionCenter(sid);
-            var b = MkButton(pt, btnText, 17, ctr.x - 104, ctr.y - 31, 208, 62, () => EnterStage(sid));
+            var b = MkButton(pt, btnText, 17, ctr.x - 104, ctr.y - 31, 208, 62, () => EnterStage(sid), "Zone_" + sid);
             // 地域ボタンは画面中央基準に置く（中央基準で表示される背景マップと常に一致させる）
-            var brt = b.GetComponent<RectTransform>();
-            brt.anchorMin = new Vector2(0.5f, 0.5f);
-            brt.anchorMax = new Vector2(0.5f, 0.5f);
-            brt.pivot = new Vector2(0.5f, 0.5f);
-            brt.anchoredPosition = new Vector2(ctr.x - 640f, 360f - ctr.y);
+            if (!preserveLayout)
+            {
+                var brt = b.GetComponent<RectTransform>();
+                brt.anchorMin = new Vector2(0.5f, 0.5f);
+                brt.anchorMax = new Vector2(0.5f, 0.5f);
+                brt.pivot = new Vector2(0.5f, 0.5f);
+                brt.anchoredPosition = new Vector2(ctr.x - 640f, 360f - ctr.y);
+            }
             string desc = J.GetStr(s, "name") + "：" + J.GetStr(s, "description") + "\n登場キャラ: " + J.GetStr(ch, "name") + "（" + J.GetStr(ch, "personality") + "）";
             AddPointerEnter(b.gameObject, () => { mapInfoLabel.text = desc; });
         }
-        var info = MkPanelBottomBand(pt, new Color(0.05f, 0.06f, 0.12f, 0.82f), 72);
+        var info = MkPanelBottomBand(pt, new Color(0.05f, 0.06f, 0.12f, 0.82f), 72, "MapInfoBar");
         info.raycastTarget = false;
-        mapInfoLabel = MkLabel(info.transform, "地域にカーソルを合わせると説明が出ます。クリックでその地域へ出発します。", 16, new Color(0.95f, 0.96f, 1f), 20, 10, 1240, 56);
+        mapInfoLabel = MkLabel(info.transform, "地域にカーソルを合わせると説明が出ます。クリックでその地域へ出発します。", 16, new Color(0.95f, 0.96f, 1f), 20, 10, 1240, 56, TextAnchor.UpperLeft, "MapInfoLabel");
         SetRectStretch(mapInfoLabel.rectTransform, 20, 10, 20, 6);
         FitText(mapInfoLabel, 11, 16);
         mapScreen.SetActive(false);
