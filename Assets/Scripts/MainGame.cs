@@ -52,6 +52,11 @@ public class MainGame : MonoBehaviour
     private RawImage bgArt;
     private RectTransform portraitBox;
     private RawImage portraitImg;
+    // 瞬きアニメーション（characters.json の blink にフレームがあるキャラ・表情だけ動く）
+    private System.Collections.Generic.List<Texture2D> blinkFrames;
+    private float blinkTimer;
+    private float blinkWait = 2f;
+    private int blinkIndex = -1; // -1 = 目を開けて待機中
     private Text nameLabel;
     private Text dialogueLabel;
     private Text personalityLabel;
@@ -1094,7 +1099,7 @@ public class MainGame : MonoBehaviour
             qrt.anchorMin = new Vector2(0.5f, 1); qrt.anchorMax = new Vector2(0.5f, 1);
             qrt.pivot = new Vector2(0.5f, 1); qrt.anchoredPosition = new Vector2(0, -436);
         }
-        MkLabelA(pt, "Prototype 2 v23 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, 1, 0, TextAnchor.UpperRight, "VersionLabel");
+        MkLabelA(pt, "Prototype 2 v24 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, 1, 0, TextAnchor.UpperRight, "VersionLabel");
     }
 
     private Dictionary<string, object> CharForStage(string stageId)
@@ -1398,6 +1403,7 @@ public class MainGame : MonoBehaviour
 
     private void Update()
     {
+        TickBlink();
         if (typing)
         {
             typePos += TypeSpeed * Time.deltaTime;
@@ -1965,14 +1971,76 @@ public class MainGame : MonoBehaviour
     private void SetExpression(string expr)
     {
         var exprs = J.GetDict(currentChar, "expressions");
-        if (exprs.Count == 0) return;
-        string path = "";
-        if (expr == "default") path = J.GetStr(currentChar, "portrait");
-        else path = J.GetStr(exprs, expr);
-        if (path != "")
+        if (exprs.Count != 0)
         {
-            var tex = LoadTex(path);
-            if (tex != null) SetPortraitTex(tex);
+            string path = "";
+            if (expr == "default") path = J.GetStr(currentChar, "portrait");
+            else path = J.GetStr(exprs, expr);
+            if (path != "")
+            {
+                var tex = LoadTex(path);
+                if (tex != null) SetPortraitTex(tex);
+            }
+        }
+        SetupBlink(expr);
+    }
+
+    // 瞬きフレームが登録されている表情なら、瞬きアニメーションを開始する
+    private void SetupBlink(string expr)
+    {
+        StopBlink();
+        var blink = J.GetDict(currentChar, "blink");
+        if (blink.Count == 0) return;
+        var sets = J.GetList(blink, expr);
+        if (sets.Count == 0) return;
+        var set = sets[UnityEngine.Random.Range(0, sets.Count)] as System.Collections.Generic.List<object>;
+        if (set == null) return;
+        var frames = new System.Collections.Generic.List<Texture2D>();
+        foreach (var o in set)
+        {
+            string fp = o as string;
+            if (fp == null || fp == "") continue;
+            var t = LoadTex(fp);
+            if (t != null) frames.Add(t);
+        }
+        if (frames.Count < 2) return;
+        blinkFrames = frames;
+        blinkWait = UnityEngine.Random.Range(1.0f, 2.4f);
+        SetPortraitTex(frames[0]);
+    }
+
+    private void StopBlink()
+    {
+        blinkFrames = null;
+        blinkIndex = -1;
+        blinkTimer = 0f;
+    }
+
+    // 瞬きの進行: しばらく目を開けて待ち、フレーム列を1回再生して、また待つ
+    private void TickBlink()
+    {
+        if (blinkFrames == null || portraitImg == null) return;
+        blinkTimer += Time.deltaTime;
+        if (blinkIndex < 0)
+        {
+            if (blinkTimer >= blinkWait)
+            {
+                blinkTimer = 0f;
+                blinkIndex = 1;
+                portraitImg.texture = blinkFrames[blinkIndex];
+            }
+        }
+        else if (blinkTimer >= 0.11f)
+        {
+            blinkTimer = 0f;
+            blinkIndex++;
+            if (blinkIndex >= blinkFrames.Count)
+            {
+                blinkIndex = -1;
+                portraitImg.texture = blinkFrames[0];
+                blinkWait = UnityEngine.Random.Range(2.2f, 4.6f);
+            }
+            else portraitImg.texture = blinkFrames[blinkIndex];
         }
     }
 

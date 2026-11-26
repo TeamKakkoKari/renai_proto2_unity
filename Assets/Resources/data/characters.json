@@ -102,6 +102,15 @@
    },
    "stage_id": "forest",
    "portrait": "res://assets/lilia_art.png",
+   "blink": {
+    "neutral": [
+     ["res://assets/lilia_neutral_b0.png", "res://assets/lilia_neutral_b1.png", "res://assets/lilia_neutral_b2.png", "res://assets/lilia_neutral_b3.png", "res://assets/lilia_neutral_b4.png", "res://assets/lilia_neutral_b5.png"],
+     ["res://assets/lilia_neutral2_b0.png", "res://assets/lilia_neutral2_b1.png", "res://assets/lilia_neutral2_b2.png", "res://assets/lilia_neutral2_b3.png", "res://assets/lilia_neutral2_b4.png", "res://assets/lilia_neutral2_b5.png"]
+    ],
+    "joy": [
+     ["res://assets/lilia_joy_b0.png", "res://assets/lilia_joy_b1.png", "res://assets/lilia_joy_b2.png", "res://assets/lilia_joy_b3.png", "res://assets/lilia_joy_b4.png"]
+    ]
+   },
    "expressions": {
     "angry": "res://assets/lilia_angry.png",
     "cry": "res://assets/lilia_cry.png",
@@ -476,6 +485,11 @@
    },
    "stage_id": "city",
    "portrait": "res://assets/yui.png",
+   "blink": {
+    "neutral": [
+     ["res://assets/yui_neutral_b0.png", "res://assets/yui_neutral_b1.png", "res://assets/yui_neutral_b2.png", "res://assets/yui_neutral_b3.png", "res://assets/yui_neutral_b4.png"]
+    ]
+   },
    "expressions": {
     "angry": "res://assets/yui_angry.png",
     "cry": "res://assets/yui_cry.png",
