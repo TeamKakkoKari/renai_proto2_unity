@@ -457,6 +457,8 @@ public class MainGame : MonoBehaviour
             var et = found.GetComponent<Text>();
             if (et == null) et = found.gameObject.AddComponent<Text>();
             if (et.font == null) et.font = jpFont;
+            et.horizontalOverflow = HorizontalWrapMode.Wrap;
+            et.verticalOverflow = VerticalWrapMode.Overflow; // v29: シーンの Truncate を上書きし、切れを防ぐ
             et.raycastTarget = false;
             return et;
         }
@@ -468,7 +470,7 @@ public class MainGame : MonoBehaviour
         t.color = color;
         t.alignment = anchor;
         t.horizontalOverflow = HorizontalWrapMode.Wrap;
-        t.verticalOverflow = VerticalWrapMode.Truncate;
+        t.verticalOverflow = VerticalWrapMode.Overflow; // v29: 高さ不足で文字を切らない（Truncate が最下行を切っていた）
         t.alignByGeometry = true; // 文字の表示をくっきりさせる
         t.raycastTarget = false;
         SetRect(t.rectTransform, x, y, w, h);
@@ -518,7 +520,7 @@ public class MainGame : MonoBehaviour
     {
         for (int fs = baseSize; fs >= minSize; fs--)
         {
-            float lineH = fs * 1.32f;
+            float lineH = fs * 1.50f; // v29: 実際の行高に合わせ、余裕を持たせる（1.32 では最下行が切れた）
             if (LinesFor(text, fs, boxW) * lineH <= boxH) return fs;
         }
         return minSize;
@@ -532,21 +534,21 @@ public class MainGame : MonoBehaviour
         if (t == null) return baseSize;
         t.resizeTextForBestFit = false;
         t.horizontalOverflow = HorizontalWrapMode.Wrap;
-        t.verticalOverflow = VerticalWrapMode.Truncate;
+        t.verticalOverflow = VerticalWrapMode.Overflow; // v29: 切れ防止（文字数自体は下の … 処理で調整）
         var rt = t.rectTransform;
         float boxW = rt.sizeDelta.x;
         float boxH = rt.sizeDelta.y;
         int fs = FitFontForBox(text, baseSize, minSize, boxW, boxH);
         string shown = text ?? "";
-        if (LinesFor(shown, fs, boxW) * fs * 1.32f > boxH)
+        if (LinesFor(shown, fs, boxW) * fs * 1.50f > boxH)
         {
             // 最小フォントでも収まらない: 入る分だけ残して「…」を付ける
-            int maxChars = Mathf.Max(1, (int)(boxW / (fs * 1.08f)) * Mathf.Max(1, (int)(boxH / (fs * 1.32f))));
+            int maxChars = Mathf.Max(1, (int)(boxW / (fs * 1.08f)) * Mathf.Max(1, (int)(boxH / (fs * 1.50f))));
             if (shown.Length > maxChars) shown = shown.Substring(0, Mathf.Max(0, maxChars - 1)) + "…";
         }
         t.fontSize = fs;
         t.text = shown;
-        if (LinesFor(shown, fs, boxW) * fs * 1.32f > boxH + 1f)
+        if (LinesFor(shown, fs, boxW) * fs * 1.50f > boxH + 1f)
             Debug.LogWarning("[UI] text still does not fit: " + shown + " in " + boxW + "x" + boxH + " @" + fs + "px");
         return fs;
     }
@@ -656,27 +658,27 @@ public class MainGame : MonoBehaviour
         // v27: SetRectForce で、preserveLayout に関わらず必ず適用する。
         SetRectForce(bubblePanel.rectTransform, 16, 92, 388, bubblePanel.rectTransform.sizeDelta.y);
         float boxW = 356f;
-        float padX = 16f, padTop = 10f;
+        float padX = 16f, padTop = 12f; // v29: 上余白も広げる
         float y = padTop; // 吹き出し内座標（上端からの距離）
         nameLabel.resizeTextForBestFit = false;
         nameLabel.fontSize = 24;
         nameLabel.color = new Color(0.25f, 0.45f, 0.25f);
         nameLabel.horizontalOverflow = HorizontalWrapMode.Wrap;
-        nameLabel.verticalOverflow = VerticalWrapMode.Truncate;
-        SetRectForce(nameLabel.rectTransform, padX, y, boxW, 28);
-        y += 28f + 4f;
+        nameLabel.verticalOverflow = VerticalWrapMode.Overflow; // v29
+        SetRectForce(nameLabel.rectTransform, padX, y, boxW, 40); // v29: 24pxの名前は28pxでは足りない（31.7px必要）→40px
+        y += 40f + 4f;
         float persH = 0f;
         if (personalityLabel.gameObject.activeSelf)
         {
             string pers = personalityLabel.text ?? "";
-            int persFs = FitFontForBox(pers, 13, 10, boxW, 3 * 13 * 1.32f);
+            int persFs = FitFontForBox(pers, 13, 10, boxW, 3 * 13 * 1.50f);
             int persLines = Mathf.Min(3, LinesFor(pers, persFs, boxW));
-            persH = Mathf.Max(15f, persLines * persFs * 1.32f);
+            persH = Mathf.Max(30f, persLines * persFs * 1.50f + 12f); // v29: 行高1.50＋余白12px
             personalityLabel.resizeTextForBestFit = false;
             personalityLabel.fontSize = persFs;
             personalityLabel.color = new Color(0.32f, 0.28f, 0.22f); // v25: シーン再利用時も濃い色に
             personalityLabel.horizontalOverflow = HorizontalWrapMode.Wrap;
-            personalityLabel.verticalOverflow = VerticalWrapMode.Truncate;
+            personalityLabel.verticalOverflow = VerticalWrapMode.Overflow; // v29
             // v28: 性格文も自分で改行する（折り返し設定に依存しない）。
             personalityLabel.text = WrapText(pers, persFs, boxW);
             SetRectForce(personalityLabel.rectTransform, padX, y, boxW, persH);
@@ -686,13 +688,21 @@ public class MainGame : MonoBehaviour
         // v27: セリフの最大行数を 4 -> 5 にする。最長のエンディング（57文字）は
         // 4行でぎりぎりなので、文字幅の見積もり誤差で切れないよう余裕を持たせる。
         // 吹き出しは最大で y92〜432（高さ340）まで伸び、パレット上端448より上に収まる。
-        int dlgFs = FitFontForBox(dlg, 22, 15, boxW, 5 * 22 * 1.32f);
+        int dlgFs = FitFontForBox(dlg, 22, 15, boxW, 5 * 22 * 1.50f);
         // v25: 人名（リーリア等）が行またぎで「リーリ／ア。」と割れないよう、
         // 割れる場合は1pxずつ縮小して、名前が1行に収まるフォントサイズにする。
         int guard = 0;
         while (dlgFs > 15 && NameSplitsAt(dlg, dlgFs, boxW) && guard < 7) { dlgFs--; guard++; }
         int dlgLines = Mathf.Min(5, LinesFor(dlg, dlgFs, boxW));
-        float dlgH = Mathf.Max(28f, dlgLines * dlgFs * 1.32f);
+        float dlgH = Mathf.Max(44f, dlgLines * dlgFs * 1.50f + 16f); // v29: 行高1.50＋余白16px
+        // v29: 吹き出しがパレット（上端448）に届かないよう、高さ上限340pxで抑える。
+        // 340pxを超えそうな長いセリフだけフォントを1pxずつ小さくし、文字を切らずに収める。
+        while (dlgFs > 15 && y + dlgH + 8f + 36f + 20f > 340f)
+        {
+            dlgFs--;
+            dlgLines = Mathf.Min(5, LinesFor(dlg, dlgFs, boxW));
+            dlgH = Mathf.Max(44f, dlgLines * dlgFs * 1.50f + 16f);
+        }
         // v28: セリフも自分で改行して fullText に入れる。タイプライターは
         // fullText を1文字ずつ出すので、改行も正しいタイミングで現れる。
         // これで、Text の折り返し設定がどうなっていても、必ず複数行になる。
@@ -700,10 +710,10 @@ public class MainGame : MonoBehaviour
         dialogueLabel.resizeTextForBestFit = false;
         dialogueLabel.fontSize = dlgFs;
         dialogueLabel.horizontalOverflow = HorizontalWrapMode.Wrap;
-        dialogueLabel.verticalOverflow = VerticalWrapMode.Truncate;
+        dialogueLabel.verticalOverflow = VerticalWrapMode.Overflow; // v29
         SetRectForce(dialogueLabel.rectTransform, padX, y, boxW, dlgH);
         y += dlgH + 8f;
-        float bubbleH = y + 36f + 12f;
+        float bubbleH = y + 36f + 20f; // v29: 下余白12→20px
         bubblePanel.rectTransform.sizeDelta = new Vector2(388f, bubbleH);
         if (nextButton != null)
         {
@@ -722,16 +732,17 @@ public class MainGame : MonoBehaviour
         if (sentenceLabel == null || speakButton == null || sentenceBgImg == null || sayPanelImg == null) return;
         float boxW = 424f;
         string s = sentenceLabel.text ?? "";
-        int fs = FitFontForBox(s, 22, 13, boxW, 3 * 22 * 1.32f);
+        int fs = FitFontForBox(s, 22, 13, boxW, 3 * 22 * 1.50f);
         int lines = Mathf.Min(3, LinesFor(s, fs, boxW));
-        float h = Mathf.Max(34f, lines * fs * 1.32f);
+        float h = Mathf.Max(46f, lines * fs * 1.50f + 12f); // v29
         sentenceLabel.resizeTextForBestFit = false;
+        sentenceLabel.verticalOverflow = VerticalWrapMode.Overflow; // v29
         sentenceLabel.fontSize = fs;
         var srt = sentenceLabel.rectTransform;
         srt.sizeDelta = new Vector2(boxW, h);
-        sentenceBgImg.rectTransform.sizeDelta = new Vector2(432f, h + 8f);
+        sentenceBgImg.rectTransform.sizeDelta = new Vector2(432f, h + 12f); // v29
         var brt = speakButton.GetComponent<RectTransform>();
-        float speakTop = 248f + (h + 8f) + 8f;
+        float speakTop = 248f + (h + 12f) + 8f;
         brt.anchoredPosition = new Vector2(brt.anchoredPosition.x, -speakTop);
         brt.sizeDelta = new Vector2(424f, 54f);
     }
@@ -1071,7 +1082,7 @@ public class MainGame : MonoBehaviour
         timerStripImg = MkRectA(root, new Color(0.05f, 0.06f, 0.12f, 0.85f), 12, 402, 956, 48, 0, 0, "TimerStrip");
         timerStripImg.raycastTarget = false;
         // 制限時間バーは単語パレットの真上に置く
-        timerLabel = MkLabelA(root, "", 17, new Color(1f, 0.95f, 0.85f), 16, 408, 300, 22, 0, 0, TextAnchor.UpperLeft, "TimerLabel");
+        timerLabel = MkLabelA(root, "", 17, new Color(1f, 0.95f, 0.85f), 16, 408, 300, 30, 0, 0, TextAnchor.UpperLeft, "TimerLabel"); // v29: 17pxは22pxでは足りない→30
         AddOutline(timerLabel, new Color(0, 0, 0, 0.55f), 1.5f);
         timerBg = MkRectA(root, new Color(0.05f, 0.05f, 0.1f, 0.75f), 16, 436, 944, 12, 0, 0, "TimerBarBg");
         timerBg.raycastTarget = false;
@@ -1097,7 +1108,7 @@ public class MainGame : MonoBehaviour
         SetRect(miniGo.GetComponent<RectTransform>(), 16, 130, 76, 112);
         evalMini = GetOrAdd<RawImage>(miniGo);
         evalMini.raycastTarget = false;
-        resultLabel = MkLabel(ct, "", 13, new Color(0.25f, 0.22f, 0.18f), 104, 130, 168, 112, TextAnchor.UpperLeft, "EvalResultLabel");
+        resultLabel = MkLabel(ct, "", 13, new Color(0.25f, 0.22f, 0.18f), 104, 130, 168, 120, TextAnchor.UpperLeft, "EvalResultLabel"); // v29: 112→120（カード内 y130+120=250<256）
         resultLabel.resizeTextForBestFit = false; // v23: SetFittedText() が文字量で決める
     }
 
@@ -1119,14 +1130,14 @@ public class MainGame : MonoBehaviour
 
         // 左上の吹き出し
         // v23: 初期サイズは2行想定。実行時は LayoutBubble() が文字量に合わせて組み直す。
-        var bubble = MkPanel(pt, new Color(0.98f, 0.96f, 0.90f, 0.97f), 16, 92, 388, 212, "SpeechBubble");
+        var bubble = MkPanel(pt, new Color(0.98f, 0.96f, 0.90f, 0.97f), 16, 92, 388, 280, "SpeechBubble"); // v29: 初期高さ212→280
         bubble.raycastTarget = false;
         bubblePanel = bubble;
-        nameLabel = MkLabel(pt, "", 24, new Color(0.25f, 0.45f, 0.25f), 32, 102, 356, 28, TextAnchor.UpperLeft, "NameLabel");
+        nameLabel = MkLabel(pt, "", 24, new Color(0.25f, 0.45f, 0.25f), 32, 102, 356, 40, TextAnchor.UpperLeft, "NameLabel"); // v29: 28→40
         AddOutline(nameLabel, new Color(1, 1, 1, 0.55f), 1f);
-        personalityLabel = MkLabel(pt, "", 13, new Color(0.32f, 0.28f, 0.22f), 32, 132, 356, 32, TextAnchor.UpperLeft, "PersonalityLabel");
+        personalityLabel = MkLabel(pt, "", 13, new Color(0.32f, 0.28f, 0.22f), 32, 132, 356, 48, TextAnchor.UpperLeft, "PersonalityLabel"); // v29: 32→48
         personalityLabel.resizeTextForBestFit = false;
-        dialogueLabel = MkLabel(pt, "", 22, new Color(0.22f, 0.18f, 0.14f), 32, 168, 356, 92, TextAnchor.UpperLeft, "DialogueLabel");
+        dialogueLabel = MkLabel(pt, "", 22, new Color(0.22f, 0.18f, 0.14f), 32, 168, 356, 150, TextAnchor.UpperLeft, "DialogueLabel"); // v29: 92→150
         dialogueLabel.resizeTextForBestFit = false;
         AddShadowFx(dialogueLabel, new Color(0, 0, 0, 0.15f), 1f);
         nextButton = MkButton(pt, "つぎへ ▼", 16, 216, 264, 128, 36, OnNext, "NextButton");
@@ -1138,7 +1149,7 @@ public class MainGame : MonoBehaviour
         var sayPanel = MkPanelA(at, new Color(0.10f, 0.11f, 0.18f, 0.96f), 800, 92, 464, 340, 1, 1, "SayPanel");
         sayPanelImg = sayPanel;
         sayPanel.raycastTarget = false;
-        var sayTitle = MkLabelA(at, "✏ あなたの発言", 16, new Color(0.95f, 0.96f, 1f), 820, 106, 300, 20, 1, 1, TextAnchor.UpperLeft, "SayTitleLabel");
+        var sayTitle = MkLabelA(at, "✏ あなたの発言", 16, new Color(0.95f, 0.96f, 1f), 820, 106, 300, 28, 1, 1, TextAnchor.UpperLeft, "SayTitleLabel"); // v29: 20→28
         sayTitle.color = new Color(0.95f, 0.96f, 1f); // v25: シーン再利用時も色を直す
         var chipsBg = MkRectA(at, new Color(0, 0, 0, 0.20f), 816, 130, 432, 82, 1, 1, "ChipsBg");
         chipsBg.raycastTarget = false;
@@ -1148,10 +1159,10 @@ public class MainGame : MonoBehaviour
         LightButton(MkButtonA(at, "削除", 15, 908, 216, 64, 30, DeleteChip, 1, 1, "ChipDeleteButton"));
         LightButton(MkButtonA(at, "↩ 一つ戻す", 14, 976, 216, 118, 30, UndoLast, 1, 1, "ChipUndoButton"));
         LightButton(MkButtonA(at, "全解除", 15, 1098, 216, 146, 30, ClearSelected, 1, 1, "ChipClearButton"));
-        var sentenceBg = MkRectA(at, new Color(1, 1, 1, 0.08f), 816, 248, 432, 64, 1, 1, "SentenceBg");
+        var sentenceBg = MkRectA(at, new Color(1, 1, 1, 0.08f), 816, 248, 432, 96, 1, 1, "SentenceBg"); // v29: 64→96
         sentenceBgImg = sentenceBg;
         sentenceBg.raycastTarget = false;
-        sentenceLabel = MkLabelA(at, "（まだ何も選んでいません）", 22, new Color(0.9f, 0.97f, 1f), 820, 252, 424, 56, 1, 1, TextAnchor.UpperLeft, "SentenceLabel");
+        sentenceLabel = MkLabelA(at, "（まだ何も選んでいません）", 22, new Color(0.9f, 0.97f, 1f), 820, 252, 424, 84, 1, 1, TextAnchor.UpperLeft, "SentenceLabel"); // v29: 56→84
         sentenceLabel.resizeTextForBestFit = false; // v23: LayoutSentence() が文字量で決める
         AddOutline(sentenceLabel, new Color(0, 0, 0, 0.5f), 1f);
         speakButton = MkButtonA(at, "✨ 発言する ▶", 24, 820, 320, 424, 54, () => DoSpeak(false), 1, 1, "SpeakButton");
@@ -1161,12 +1172,12 @@ public class MainGame : MonoBehaviour
         tabsArea = SetRectA(FindOrNew(at, "Tabs").GetComponent<RectTransform>(), 0, 0, 32, AnchorY(0, 456, 60), 690, 60);
         BuildSearchField(at, 734, 462, 210, 30);
         paletteArea = SetRectA(FindOrNew(at, "Palette").GetComponent<RectTransform>(), 0, 0, 32, AnchorY(0, 524, 140), 912, 140);
-        var hint = MkLabelA(at, "ⓘ 単語を選んで、自由に文章を作りましょう！", 14, new Color(0.32f, 0.28f, 0.22f), 32, 668, 700, 20, 0, 0, TextAnchor.UpperLeft, "PaletteHintLabel");
+        var hint = MkLabelA(at, "ⓘ 単語を選んで、自由に文章を作りましょう！", 14, new Color(0.32f, 0.28f, 0.22f), 32, 668, 700, 28, 0, 0, TextAnchor.UpperLeft, "PaletteHintLabel"); // v29: 20→28
         hint.color = new Color(0.32f, 0.28f, 0.22f); // v25: シーン再利用時も色を直す
         hint.raycastTarget = false;
         // パレットのページ送り（「すべて」103語を1画面に収めるためのもの。ヒント文と重ならない位置）
         LightButton(MkButtonA(at, "◀", 14, 760, 664, 36, 24, () => ChangePalettePage(-1), 0, 0, "PalettePrevButton"));
-        palettePageLabel = MkLabelA(at, "1 / 1", 14, new Color(0.32f, 0.28f, 0.22f), 800, 664, 60, 24, 0, 0, TextAnchor.MiddleCenter, "PalettePageLabel");
+        palettePageLabel = MkLabelA(at, "1 / 1", 14, new Color(0.32f, 0.28f, 0.22f), 800, 664, 60, 28, 0, 0, TextAnchor.MiddleCenter, "PalettePageLabel"); // v29: 24→28
         palettePageLabel.color = new Color(0.32f, 0.28f, 0.22f); // v25: シーン再利用時も色を直す
         palettePageLabel.raycastTarget = false;
         LightButton(MkButtonA(at, "▶", 14, 864, 664, 36, 24, () => ChangePalettePage(1), 0, 0, "PaletteNextButton"));
@@ -1311,8 +1322,8 @@ public class MainGame : MonoBehaviour
         // シーン生成時（v22）の「Prototype 2 v22 (Unity版)」のまま残ってしまう。
         // 戻り値の Text に直接テキストを入れて、実行中の版数を必ず表示する。
         // これで、タイトル画面右下の版数を見れば、どの版のコードで動いているか分かる。
-        var versionLabel = MkLabelA(pt, "Prototype 2 v28 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, 1, 0, TextAnchor.UpperRight, "VersionLabel");
-        versionLabel.text = "Prototype 2 v28 (Unity版)";
+        var versionLabel = MkLabelA(pt, "Prototype 2 v29 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, 1, 0, TextAnchor.UpperRight, "VersionLabel");
+        versionLabel.text = "Prototype 2 v29 (Unity版)";
         versionLabel.fontSize = 13;
     }
 
@@ -1628,7 +1639,8 @@ public class MainGame : MonoBehaviour
             && (dialogueLabel.transform.parent != bubblePanel.transform
                 || dialogueLabel.rectTransform.sizeDelta.x != 356f
                 || dialogueLabel.horizontalOverflow != HorizontalWrapMode.Wrap
-                || dialogueLabel.resizeTextForBestFit))
+                || dialogueLabel.verticalOverflow != VerticalWrapMode.Overflow // v29
+                || dialogueLabel.rectTransform.sizeDelta.y < 44f)) // v29: 高さが小さいままなら直す
         {
             LayoutBubble();
         }
@@ -1938,7 +1950,7 @@ public class MainGame : MonoBehaviour
             label.resizeTextForBestFit = false;
             string labelText = label.text;
             int pf = FitFontForBox(labelText, wordFont, 11, bw - 30f, bh);
-            if (LinesFor(labelText, pf, bw - 30f) * pf * 1.32f > bh) label.text = text;
+            if (LinesFor(labelText, pf, bw - 30f) * pf * 1.50f > bh) label.text = text; // v29
             label.fontSize = FitFontForBox(label.text, wordFont, 11, bw - 30f, bh);
             var rt = b.GetComponent<RectTransform>();
             rt.sizeDelta = new Vector2(bw, bh);
