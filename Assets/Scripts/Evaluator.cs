@@ -66,7 +66,7 @@ public static class Evaluator
     }
 
     private static Dictionary<string, object> Result(int score, List<string> reasons, string polarity,
-        bool sceneChange, bool confused, int violations, bool offtopic, bool minimal, bool brief = false)
+        bool sceneChange, bool confused, int violations, bool offtopic, bool minimal, bool brief = false, string unknown = "")
     {
         return new Dictionary<string, object>
         {
@@ -79,6 +79,7 @@ public static class Evaluator
             { "offtopic", offtopic },
             { "minimal", minimal },
             { "brief", brief },
+            { "unknown", unknown },
         };
     }
 
@@ -110,6 +111,27 @@ public static class Evaluator
             return Result(J.GetInt(cfg, "direct_dislike_you", -15),
                 new List<string> { "「あなたは嫌い」は相手を深く傷つける (-15)" },
                 "negative", false, false, 0, false, false);
+        }
+
+        // v38: 彼女がまだ知らない言葉（free）が含まれているか。
+        // 核になる既知の言葉が無ければ、意味不明としてではなく「初めて聞く言葉」として返す
+        var freeTexts = new List<string>();
+        foreach (var t in tokens) if (J.GetStr(t, "category") == "free") freeTexts.Add(J.GetStr(t, "text"));
+        string unknownJoined = string.Join("、", freeTexts);
+        if (freeTexts.Count > 0)
+        {
+            bool knownCore = false;
+            foreach (var t in tokens)
+            {
+                string c = J.GetStr(t, "category");
+                if (c == "affirm" || c == "negate" || c == "emotion" || c == "action") { knownCore = true; break; }
+            }
+            if (!knownCore)
+            {
+                return Result(0,
+                    new List<string> { "初めて聞く言葉だった（意味を教えてあげよう）" },
+                    "none", false, false, 0, false, false, false, unknownJoined);
+            }
         }
 
         // 意味をなさない発言: 肯定/否定/感情/動作のどれも無い（名詞だけの羅列など）
@@ -478,7 +500,7 @@ public static class Evaluator
             if (score > -1) score = -1;
         }
 
-        return Result(score, reasons, polarity, sceneChange, confused, vcount, isOfftopic, false);
+        return Result(score, reasons, polarity, sceneChange, confused, vcount, isOfftopic, false, false, unknownJoined);
     }
 
     public static string ReactionKey(int score)

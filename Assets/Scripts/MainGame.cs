@@ -57,6 +57,15 @@ public class MainGame : MonoBehaviour
     private string pendingEnding = "";
     private string phaseIntroNote = "";
     private int negPhaseEnds = 0;
+    private readonly List<Dictionary<string, object>> learnedWords = new List<Dictionary<string, object>>();
+    private string pendingTeachWord = "";
+    private GameObject teachScreen;
+    private Text teachTitleLabel;
+    private Text teachBodyLabel;
+    private GameObject teachCatGroup;
+    private GameObject teachSentGroup;
+    private string teachWord = "";
+    private string teachCategory = "";
     private string screen = "title"; // title | map | game
     private System.Random rng = new System.Random();
 
@@ -292,6 +301,25 @@ public class MainGame : MonoBehaviour
                         routeFlags[kv.Key] = fs;
                     }
                 }
+                // v38: 教えて覚えてもらった言葉（学習した語彙）を語彙データへ戻す
+                foreach (var lo in J.GetList(root, "learned"))
+                {
+                    var lw = J.Dict(lo);
+                    string lt = J.GetStr(lw, "text");
+                    if (lt == "" || wordsByText.ContainsKey(lt)) continue;
+                    var nw = new Dictionary<string, object>();
+                    nw["text"] = lt;
+                    nw["category"] = J.GetStr(lw, "category", "target");
+                    var ntags = new List<object>();
+                    foreach (var tg in J.List(J.Get(lw, "tags"))) ntags.Add(J.Str(tg));
+                    nw["tags"] = ntags;
+                    nw["learned"] = true;
+                    var wlist = J.GetList(dataWords, "words");
+                    wlist.Add(nw);
+                    dataWords["words"] = wlist;
+                    learnedWords.Add(nw);
+                    wordsByText[lt] = nw;
+                }
                 // 旧形式（好感度だけのフラットなJSON）もそのまま読み込める
                 foreach (var kv in aff) affection[kv.Key] = J.GetInt(aff, kv.Key);
             }
@@ -325,11 +353,18 @@ public class MainGame : MonoBehaviour
                 if (routeFlags.TryGetValue(k, out fset)) foreach (var f in fset) fl.Add("\"" + f + "\"");
                 rp.Add("\"" + k + "\":{\"phase\":\"" + pv + "\",\"done\":\"" + dv + "\",\"flags\":[" + string.Join(",", fl) + "]}");
             }
+            var lp = new List<string>();
+            foreach (var lw in learnedWords)
+            {
+                var lt2 = new List<string>();
+                foreach (var tg in J.List(J.Get(lw, "tags"))) lt2.Add("\"" + J.Str(tg) + "\"");
+                lp.Add("{\"text\":\"" + J.GetStr(lw, "text") + "\",\"category\":\"" + J.GetStr(lw, "category") + "\",\"tags\":[" + string.Join(",", lt2) + "]}");
+            }
             File.WriteAllText(SavePath,
                 "{\"affection\":{" + string.Join(",", ap)
                 + "},\"fun\":{" + string.Join(",", fp)
                 + "},\"trust\":{" + string.Join(",", tp)
-                + "},\"favorites\":[" + string.Join(",", fv) + "],\"route\":{" + string.Join(",", rp) + "}}");
+                + "},\"favorites\":[" + string.Join(",", fv) + "],\"route\":{" + string.Join(",", rp) + "},\"learned\":[" + string.Join(",", lp) + "]}}");
         }
         catch (Exception) { /*保存に失敗してもゲームは続行*/ }
     }
@@ -1118,6 +1153,7 @@ public class MainGame : MonoBehaviour
         BuildTitleScreen();
         BuildMapScreen();
         BuildResultScreen();
+        BuildTeachPanel();
         BuildBacklog();
     }
 
@@ -1251,7 +1287,8 @@ public class MainGame : MonoBehaviour
         searchField = field;
         // 案1「打って変換」: Enterで入力を終えたら、打った文字を単語に変換して文に加える
         field.onEndEdit.AddListener((string s) => ConvertSearchToWords());
-        LightButton(MkButtonA(parent, "⌨ 打った言葉を単語にする", 13, x, y + h + 4, w, 24, () => ConvertSearchToWords(), 0, 0, "SearchConvertButton"));
+        LightButton(MkButtonA(parent, "⌨ 単語にする", 12, x, y + h + 4, w / 2 - 2, 24, () => ConvertSearchToWords(), 0, 0, "SearchConvertButton"));
+        LightButton(MkButtonA(parent, "そのまま使う", 12, x + w / 2 + 2, y + h + 4, w / 2 - 2, 24, () => AddFreeWord(), 0, 0, "SearchFreeButton"));
     }
 
     // 打った文字を語彙の単語列に変換して、発言のチップとして追加する。
@@ -1268,7 +1305,27 @@ public class MainGame : MonoBehaviour
         searchField.text = unmatched;
         RefreshSentence();
         if (unmatched != "")
-            SetFittedText(resultLabel, "『" + unmatched + "』は登録されていない言葉でした。パレットから近い単語を探せます。", 13, 10);
+            SetFittedText(resultLabel, "『" + unmatched + "』は未登録の言葉でした。近い言葉をパレットに出しています。そのまま使うこともできます。", 13, 10);
+    }
+
+    // 入力欄の言葉を、まだ彼女が知らない言葉（free）としてそのまま文に入れる。
+    // 発言すると彼女が聞き返し、意味を教えると語彙に定着する
+    private void AddFreeWord()
+    {
+        if (searchField == null || phase != "ask") return;
+        string s = searchField.text;
+        if (string.IsNullOrEmpty(s)) return;
+        s = s.Replace(" ", "").Replace("　", "").Replace("、", "").Replace("。", "")
+             .Replace("\"", "").Replace("\\", "");
+        if (s.Length == 0) return;
+        if (s.Length > 12) s = s.Substring(0, 12);
+        var w = new Dictionary<string, object>();
+        w["text"] = s;
+        w["category"] = "free";
+        w["tags"] = new List<object>();
+        AddWord(w);
+        searchField.text = "";
+        RefreshSentence();
     }
 
     private void LayoutFrame(bool ask, bool animate)
@@ -1376,6 +1433,88 @@ public class MainGame : MonoBehaviour
         preserveLayout = saved;
     }
 
+    // v38: 知らない言葉の意味を教えるパネル。リザルト画面と同じく、
+    // シーン生成済みUIに含まれていないためレイアウトはコードで確定させる
+    private void BuildTeachPanel()
+    {
+        bool saved = preserveLayout;
+        preserveLayout = false;
+        var panel = MkPanelStretch(root, new Color(0.05f, 0.08f, 0.16f, 0.92f), "TeachPanel");
+        teachScreen = panel.gameObject;
+        var pt = panel.transform;
+        var card = MkPanel(pt, new Color(0.10f, 0.12f, 0.20f, 0.97f), 330, 130, 620, 460, "TeachCard");
+        var ct = card.transform;
+        teachTitleLabel = MkLabel(ct, "", 24, new Color(1f, 0.97f, 0.9f), 36, 26, 548, 40, TextAnchor.MiddleCenter, "TeachTitleLabel");
+        teachBodyLabel = MkLabel(ct, "", 16, new Color(0.95f, 0.96f, 1f), 36, 78, 548, 56, TextAnchor.UpperCenter, "TeachBodyLabel");
+        var catGo = FindOrNew(ct, "TeachCatGroup");
+        SetRectStretch(catGo.GetComponent<RectTransform>(), 0, 0, 0, 0);
+        teachCatGroup = catGo;
+        var cg = catGo.transform;
+        MkButton(cg, "もの・こと", 18, 36, 150, 264, 64, () => TeachPickCategory("target"), "TeachCatTarget");
+        MkButton(cg, "気持ち・様子", 18, 320, 150, 264, 64, () => TeachPickCategory("emotion"), "TeachCatEmotion");
+        MkButton(cg, "すること", 18, 36, 226, 264, 64, () => TeachPickCategory("action"), "TeachCatAction");
+        MkButton(cg, "つなぎ言葉・その他", 18, 320, 226, 264, 64, () => TeachPickCategory("connect"), "TeachCatConnect");
+        var sentGo = FindOrNew(ct, "TeachSentGroup");
+        SetRectStretch(sentGo.GetComponent<RectTransform>(), 0, 0, 0, 0);
+        teachSentGroup = sentGo;
+        var sg = sentGo.transform;
+        MkButton(sg, "良い・好きな感じ", 18, 36, 150, 548, 56, () => TeachPickSentiment("positive"), "TeachSentPositive");
+        MkButton(sg, "普通・どちらでもない", 18, 36, 218, 548, 56, () => TeachPickSentiment("none"), "TeachSentNone");
+        MkButton(sg, "悪い・嫌いな感じ", 18, 36, 286, 548, 56, () => TeachPickSentiment("negative"), "TeachSentNegative");
+        MkButton(ct, "やめておく", 16, 36, 386, 180, 48, () => FinishTeach(false), "TeachSkipButton");
+        teachScreen.SetActive(false);
+        preserveLayout = saved;
+    }
+
+    private void ShowTeachPanel()
+    {
+        teachWord = pendingTeachWord;
+        teachCategory = "";
+        teachTitleLabel.text = "『" + teachWord + "』って、どういう意味？";
+        teachBodyLabel.text = J.GetStr(currentChar, "name") + "は、その言葉を知らないみたい。意味を教えてあげよう。";
+        teachCatGroup.SetActive(true);
+        teachSentGroup.SetActive(false);
+        teachScreen.SetActive(true);
+    }
+
+    private void TeachPickCategory(string cat)
+    {
+        teachCategory = cat;
+        teachBodyLabel.text = "『" + teachWord + "』は、どんな感じの言葉？";
+        teachCatGroup.SetActive(false);
+        teachSentGroup.SetActive(true);
+    }
+
+    private void TeachPickSentiment(string sent)
+    {
+        var tags = new List<object>();
+        if (sent == "positive") { tags.Add("positive"); tags.Add("like"); }
+        else if (sent == "negative") { tags.Add("negative"); tags.Add("dislike"); }
+        var nw = new Dictionary<string, object>();
+        nw["text"] = teachWord;
+        nw["category"] = teachCategory == "" ? "target" : teachCategory;
+        nw["tags"] = tags;
+        nw["learned"] = true;
+        var wlist = J.GetList(dataWords, "words");
+        wlist.Add(nw);
+        dataWords["words"] = wlist;
+        learnedWords.Add(nw);
+        wordsByText[teachWord] = nw;
+        SaveAffection();
+        FinishTeach(true);
+    }
+
+    // 教え終わったら（または やめておく を選んだら）物語を次へ進める
+    private void FinishTeach(bool learned)
+    {
+        if (learned) LogLine("システム", "『" + teachWord + "』を覚えてもらった");
+        teachScreen.SetActive(false);
+        pendingTeachWord = "";
+        teachWord = "";
+        storyPos++;
+        ShowBeat();
+    }
+
     private void BuildTitleScreen()
     {
         var panel = MkPanelStretch(root, new Color(0.05f, 0.08f, 0.16f, 1f), "TitlePanel");
@@ -1408,8 +1547,8 @@ public class MainGame : MonoBehaviour
         // シーン生成時（v22）の「Prototype 2 v22 (Unity版)」のまま残ってしまう。
         // 戻り値の Text に直接テキストを入れて、実行中の版数を必ず表示する。
         // これで、タイトル画面右下の版数を見れば、どの版のコードで動いているか分かる。
-        var versionLabel = MkLabelA(pt, "Prototype 2 v37 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, 1, 0, TextAnchor.UpperRight, "VersionLabel");
-        versionLabel.text = "Prototype 2 v37 (Unity版)";
+        var versionLabel = MkLabelA(pt, "Prototype 2 v38 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, 1, 0, TextAnchor.UpperRight, "VersionLabel");
+        versionLabel.text = "Prototype 2 v38 (Unity版)";
         versionLabel.fontSize = 13;
     }
 
@@ -1716,9 +1855,19 @@ public class MainGame : MonoBehaviour
         routePhase.Clear();
         routeFlags.Clear();
         routeDone.Clear();
+        // 覚えた言葉もリセットする（語彙を初期状態に戻す）
+        var baseWords = new List<object>();
+        foreach (var wo in J.GetList(dataWords, "words"))
+        {
+            var w = J.Dict(wo);
+            if (J.GetBool(w, "learned")) { wordsByText.Remove(J.GetStr(w, "text")); continue; }
+            baseWords.Add(wo);
+        }
+        dataWords["words"] = baseWords;
+        learnedWords.Clear();
         SaveAffection();
         RefreshCharPanel();
-        mapInfoLabel.text = "好感度・面白さ・信頼度・ルート進行をリセットしました（全キャラクター）。地域をクリックでその地域へ出発します。";
+        mapInfoLabel.text = "好感度・面白さ・信頼度・ルート進行・覚えた言葉をリセットしました（全キャラクター）。地域をクリックでその地域へ出発します。";
     }
 
     private void SetSpeaker(bool isLine)
@@ -1969,6 +2118,8 @@ public class MainGame : MonoBehaviour
     {
         if (phase == "ask") return;
         if (phase == "route_ending") { ShowResult(); return; }
+        if (teachScreen != null && teachScreen.activeSelf) return;
+        if (pendingTeachWord != "") { ShowTeachPanel(); return; }
         storyPos++;
         ShowBeat();
     }
@@ -2276,9 +2427,17 @@ public class MainGame : MonoBehaviour
         {
             // 検索中は全単語から部分一致で探す
             items = new List<Dictionary<string, object>>();
+            // 言い換え提案: 表記・読みが近い単語を先に並べる（そのまま使える候補）
+            var seenTexts = new HashSet<string>();
+            foreach (var sw in WordSegmenter.Suggest(searchText, J.GetList(dataWords, "words"), 8))
+            {
+                items.Add(sw);
+                seenTexts.Add(J.GetStr(sw, "text"));
+            }
             foreach (var wo in J.GetList(dataWords, "words"))
             {
                 var w = J.Dict(wo);
+                if (seenTexts.Contains(J.GetStr(w, "text"))) continue;
                 if (J.GetStr(w, "text").Contains(searchText) || J.GetStr(w, "reading").Contains(searchText)) items.Add(w);
             }
         }
@@ -2564,6 +2723,8 @@ public class MainGame : MonoBehaviour
         bool offtopic = J.GetBool(res, "offtopic");
         bool minimal = J.GetBool(res, "minimal");
         bool brief = J.GetBool(res, "brief");
+        string unknownWord = "";
+        foreach (var tk in selected) if (J.GetStr(tk, "category") == "free") { unknownWord = J.GetStr(tk, "text"); break; }
         // 反応の優先順位: 崩れた文 → 現実には難しい関係（笑い） → 聞き返し →
         // 話題逸脱（質問の形のときは通常反応） → 一言返事 → 好感度段位
         string rkey = key;
@@ -2573,6 +2734,9 @@ public class MainGame : MonoBehaviour
         else if (brief) rkey = "brief";
         else if (offtopic && !ana.questionForm) rkey = "offtopic";
         else if (minimal) rkey = "minimal";
+        // 知らない言葉が含まれていたら意味を聞き返す（崩れた文・笑える文のときはそちらを優先）
+        if (unknownWord != "" && rkey != "confused" && rkey != "absurd") rkey = "clarify";
+        if (unknownWord != "") pendingTeachWord = unknownWord;
         // 表情は反応キーに連動させる
         if (rkey == "confused" || rkey == "offtopic" || rkey == "clarify") SetExpression("neutral");
         else if (rkey == "absurd") SetExpression("joy");
@@ -2611,7 +2775,7 @@ public class MainGame : MonoBehaviour
             if (key == "great") runGreat++;
             else if (key == "good") runGood++;
             string fog = J.GetStr(activeBeat, "flag_on_good");
-            bool reached = (key == "great" || key == "good") && !confused && !offtopic && !minimal;
+            bool reached = (key == "great" || key == "good") && !confused && !offtopic && !minimal && unknownWord == "";
             if (fog != "" && reached) { SetFlag(cid, fog); SaveAffection(); }
         }
         var reactions = J.GetList(J.GetDict(currentChar, "reactions"), rkey);

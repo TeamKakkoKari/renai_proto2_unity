@@ -56,4 +56,33 @@ public static class WordSegmenter
         unmatched = bad.ToString();
         return result;
     }
+
+    // 言い換え提案: 表記・読みの先頭一致や包含で近い単語を探す（検索欄の候補表示用）
+    public static List<Dictionary<string, object>> Suggest(string query, List<object> words, int max)
+    {
+        var scored = new List<KeyValuePair<int, Dictionary<string, object>>>();
+        if (query.Length >= 2)
+        {
+            foreach (var o in words)
+            {
+                var w = J.Dict(o);
+                int best = 0;
+                foreach (var cand in new[] { J.GetStr(w, "text"), J.GetStr(w, "reading") })
+                {
+                    if (cand.Length == 0) continue;
+                    int cp = 0;
+                    int lim = System.Math.Min(query.Length, cand.Length);
+                    while (cp < lim && query[cp] == cand[cp]) cp++;
+                    int sc = cp * 2;
+                    if (cand.Contains(query) || query.Contains(cand)) sc += 3;
+                    if (sc > best) best = sc;
+                }
+                if (best >= 4) scored.Add(new KeyValuePair<int, Dictionary<string, object>>(best, w));
+            }
+            scored.Sort((a, b) => b.Key.CompareTo(a.Key));
+        }
+        var res = new List<Dictionary<string, object>>();
+        for (int i = 0; i < scored.Count && res.Count < max; i++) res.Add(scored[i].Value);
+        return res;
+    }
 }
