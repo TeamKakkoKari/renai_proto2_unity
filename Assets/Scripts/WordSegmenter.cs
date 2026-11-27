@@ -9,6 +9,7 @@ public static class WordSegmenter
     public static List<Dictionary<string, object>> Segment(string input, List<object> words, out string unmatched)
     {
         var byText = new Dictionary<string, Dictionary<string, object>>();
+        var byReading = new Dictionary<string, Dictionary<string, object>>();
         int maxLen = 0;
         foreach (var o in words)
         {
@@ -18,6 +19,13 @@ public static class WordSegmenter
             {
                 byText[t] = w;
                 if (t.Length > maxLen) maxLen = t.Length;
+            }
+            // 読み仮名でも引けるようにする（「きれい」と打っても「綺麗」に変換される）
+            string r = J.GetStr(w, "reading");
+            if (r.Length > 0 && !byReading.ContainsKey(r))
+            {
+                byReading[r] = w;
+                if (r.Length > maxLen) maxLen = r.Length;
             }
         }
         // 空白と句読点は区切りとして読み飛ばす
@@ -38,7 +46,9 @@ public static class WordSegmenter
             for (int len = System.Math.Min(maxLen, s.Length - i); len >= 1; len--)
             {
                 Dictionary<string, object> w;
-                if (byText.TryGetValue(s.Substring(i, len), out w)) { hit = w; hitLen = len; break; }
+                string sub = s.Substring(i, len);
+                // 表記が一致する単語を優先し、次に読み仮名の一致を見る
+                if (byText.TryGetValue(sub, out w) || byReading.TryGetValue(sub, out w)) { hit = w; hitLen = len; break; }
             }
             if (hit != null) { result.Add(hit); i += hitLen; }
             else { bad.Append(s[i]); i++; }

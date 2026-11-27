@@ -1267,6 +1267,8 @@ public class MainGame : MonoBehaviour
         foreach (var w in words) AddWord(w);
         searchField.text = unmatched;
         RefreshSentence();
+        if (unmatched != "")
+            SetFittedText(resultLabel, "『" + unmatched + "』は登録されていない言葉でした。パレットから近い単語を探せます。", 13, 10);
     }
 
     private void LayoutFrame(bool ask, bool animate)
@@ -1406,8 +1408,8 @@ public class MainGame : MonoBehaviour
         // シーン生成時（v22）の「Prototype 2 v22 (Unity版)」のまま残ってしまう。
         // 戻り値の Text に直接テキストを入れて、実行中の版数を必ず表示する。
         // これで、タイトル画面右下の版数を見れば、どの版のコードで動いているか分かる。
-        var versionLabel = MkLabelA(pt, "Prototype 2 v36 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, 1, 0, TextAnchor.UpperRight, "VersionLabel");
-        versionLabel.text = "Prototype 2 v36 (Unity版)";
+        var versionLabel = MkLabelA(pt, "Prototype 2 v37 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, 1, 0, TextAnchor.UpperRight, "VersionLabel");
+        versionLabel.text = "Prototype 2 v37 (Unity版)";
         versionLabel.fontSize = 13;
     }
 
@@ -2277,7 +2279,7 @@ public class MainGame : MonoBehaviour
             foreach (var wo in J.GetList(dataWords, "words"))
             {
                 var w = J.Dict(wo);
-                if (J.GetStr(w, "text").Contains(searchText)) items.Add(w);
+                if (J.GetStr(w, "text").Contains(searchText) || J.GetStr(w, "reading").Contains(searchText)) items.Add(w);
             }
         }
         else if (activeCategory == "__rec")

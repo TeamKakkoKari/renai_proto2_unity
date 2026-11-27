@@ -48,35 +48,40 @@
       "tags": [
         "positive"
       ],
-      "text": "はい"
+      "text": "はい",
+      "reading": "はい"
     },
     {
       "category": "affirm",
       "tags": [
         "positive"
       ],
-      "text": "そうです"
+      "text": "そうです",
+      "reading": "そうです"
     },
     {
       "category": "affirm",
       "tags": [
         "positive"
       ],
-      "text": "もちろん"
+      "text": "もちろん",
+      "reading": "もちろん"
     },
     {
       "category": "negate",
       "tags": [
         "negative"
       ],
-      "text": "いいえ"
+      "text": "いいえ",
+      "reading": "いいえ"
     },
     {
       "category": "negate",
       "tags": [
         "negative"
       ],
-      "text": "違います"
+      "text": "違います",
+      "reading": "ちがいます"
     },
     {
       "category": "emotion",
@@ -84,7 +89,8 @@
         "positive",
         "like"
       ],
-      "text": "好き"
+      "text": "好き",
+      "reading": "すき"
     },
     {
       "category": "emotion",
@@ -92,14 +98,16 @@
         "negative",
         "dislike"
       ],
-      "text": "嫌い"
+      "text": "嫌い",
+      "reading": "きらい"
     },
     {
       "category": "emotion",
       "tags": [
         "positive"
       ],
-      "text": "嬉しい"
+      "text": "嬉しい",
+      "reading": "うれしい"
     },
     {
       "category": "emotion",
@@ -108,14 +116,16 @@
         "nature",
         "beauty"
       ],
-      "text": "綺麗"
+      "text": "綺麗",
+      "reading": "きれい"
     },
     {
       "category": "emotion",
       "tags": [
         "positive"
       ],
-      "text": "楽しい"
+      "text": "楽しい",
+      "reading": "たのしい"
     },
     {
       "category": "emotion",
@@ -124,14 +134,16 @@
         "food",
         "cooking"
       ],
-      "text": "美味しい"
+      "text": "美味しい",
+      "reading": "おいしい"
     },
     {
       "category": "emotion",
       "tags": [
         "positive"
       ],
-      "text": "すごい"
+      "text": "すごい",
+      "reading": "すごい"
     },
     {
       "category": "emotion",
@@ -140,36 +152,42 @@
         "magic",
         "mystery"
       ],
-      "text": "不思議"
+      "text": "不思議",
+      "reading": "ふしぎ"
     },
     {
       "category": "degree",
       "tags": [],
-      "text": "とても"
+      "text": "とても",
+      "reading": "とても"
     },
     {
       "category": "degree",
       "tags": [],
-      "text": "少し"
+      "text": "少し",
+      "reading": "すこし"
     },
     {
       "category": "degree",
       "tags": [],
-      "text": "かなり"
+      "text": "かなり",
+      "reading": "かなり"
     },
     {
       "category": "target",
       "tags": [
         "you"
       ],
-      "text": "あなた"
+      "text": "あなた",
+      "reading": "あなた"
     },
     {
       "category": "target",
       "tags": [
         "me"
       ],
-      "text": "私"
+      "text": "私",
+      "reading": "わたし"
     },
     {
       "category": "target",
@@ -177,7 +195,8 @@
         "nature",
         "forest"
       ],
-      "text": "森"
+      "text": "森",
+      "reading": "もり"
     },
     {
       "category": "target",
@@ -185,7 +204,8 @@
         "nature",
         "plant"
       ],
-      "text": "花"
+      "text": "花",
+      "reading": "はな"
     },
     {
       "category": "target",
@@ -193,7 +213,8 @@
         "nature",
         "plant"
       ],
-      "text": "植物"
+      "text": "植物",
+      "reading": "しょくぶつ"
     },
     {
       "category": "target",
@@ -202,7 +223,8 @@
         "cooking",
         "daily"
       ],
-      "text": "料理"
+      "text": "料理",
+      "reading": "りょうり"
     },
     {
       "category": "target",
@@ -210,7 +232,8 @@
         "ore",
         "mining"
       ],
-      "text": "鉱石"
+      "text": "鉱石",
+      "reading": "こうせき"
     },
     {
       "category": "target",
@@ -218,14 +241,16 @@
         "smithing",
         "tech"
       ],
-      "text": "鍛冶"
+      "text": "鍛冶",
+      "reading": "かじ"
     },
     {
       "category": "target",
       "tags": [
         "tech"
       ],
-      "text": "技術"
+      "text": "技術",
+      "reading": "ぎじゅつ"
     },
     {
       "category": "target",
@@ -233,14 +258,16 @@
         "drink",
         "daily"
       ],
-      "text": "酒"
+      "text": "酒",
+      "reading": "さけ"
     },
     {
       "category": "target",
       "tags": [
         "adventure"
       ],
-      "text": "冒険"
+      "text": "冒険",
+      "reading": "ぼうけん"
     },
     {
       "category": "target",
@@ -248,14 +275,16 @@
         "hunting",
         "exercise"
       ],
-      "text": "狩猟"
+      "text": "狩猟",
+      "reading": "しゅりょう"
     },
     {
       "category": "target",
       "tags": [
         "exercise"
       ],
-      "text": "運動"
+      "text": "運動",
+      "reading": "うんどう"
     },
     {
       "category": "target",
@@ -263,7 +292,8 @@
         "food",
         "hunting"
       ],
-      "text": "肉"
+      "text": "肉",
+      "reading": "にく"
     },
     {
       "category": "target",
@@ -272,21 +302,24 @@
         "culture",
         "daily"
       ],
-      "text": "買い物"
+      "text": "買い物",
+      "reading": "かいもの"
     },
     {
       "category": "target",
       "tags": [
         "culture"
       ],
-      "text": "本"
+      "text": "本",
+      "reading": "ほん"
     },
     {
       "category": "target",
       "tags": [
         "culture"
       ],
-      "text": "文化"
+      "text": "文化",
+      "reading": "ぶんか"
     },
     {
       "category": "target",
@@ -294,7 +327,8 @@
         "magic",
         "mystery"
       ],
-      "text": "魔法"
+      "text": "魔法",
+      "reading": "まほう"
     },
     {
       "category": "target",
@@ -303,7 +337,8 @@
         "mystery",
         "rare"
       ],
-      "text": "星"
+      "text": "星",
+      "reading": "ほし"
     },
     {
       "category": "target",
@@ -312,7 +347,8 @@
         "ore",
         "mystery"
       ],
-      "text": "珍しい石"
+      "text": "珍しい石",
+      "reading": "めずらしいいし"
     },
     {
       "category": "target",
@@ -320,14 +356,16 @@
         "culture",
         "nature"
       ],
-      "text": "歌"
+      "text": "歌",
+      "reading": "うた"
     },
     {
       "category": "action",
       "tags": [
         "move"
       ],
-      "text": "行く"
+      "text": "行く",
+      "reading": "いく"
     },
     {
       "category": "action",
@@ -335,14 +373,16 @@
         "move",
         "want"
       ],
-      "text": "行きたい"
+      "text": "行きたい",
+      "reading": "いきたい"
     },
     {
       "category": "action",
       "tags": [
         "see"
       ],
-      "text": "見る"
+      "text": "見る",
+      "reading": "みる"
     },
     {
       "category": "action",
@@ -350,14 +390,16 @@
         "see",
         "want"
       ],
-      "text": "見たい"
+      "text": "見たい",
+      "reading": "みたい"
     },
     {
       "category": "action",
       "tags": [
         "food"
       ],
-      "text": "食べる"
+      "text": "食べる",
+      "reading": "たべる"
     },
     {
       "category": "action",
@@ -365,7 +407,8 @@
         "food",
         "want"
       ],
-      "text": "食べたい"
+      "text": "食べたい",
+      "reading": "たべたい"
     },
     {
       "category": "action",
@@ -374,21 +417,24 @@
         "tech",
         "cooking"
       ],
-      "text": "作る"
+      "text": "作る",
+      "reading": "つくる"
     },
     {
       "category": "action",
       "tags": [
         "culture"
       ],
-      "text": "読む"
+      "text": "読む",
+      "reading": "よむ"
     },
     {
       "category": "action",
       "tags": [
         "hunting"
       ],
-      "text": "狩る"
+      "text": "狩る",
+      "reading": "かる"
     },
     {
       "category": "connect",
@@ -396,24 +442,28 @@
         "contrast",
         "turn"
       ],
-      "text": "でも"
+      "text": "でも",
+      "reading": "でも"
     },
     {
       "category": "connect",
       "tags": [],
-      "text": "そして"
+      "text": "そして",
+      "reading": "そして"
     },
     {
       "category": "connect",
       "tags": [],
-      "text": "だから"
+      "text": "だから",
+      "reading": "だから"
     },
     {
       "category": "connect",
       "tags": [
         "together"
       ],
-      "text": "一緒に"
+      "text": "一緒に",
+      "reading": "いっしょに"
     },
     {
       "category": "connect",
@@ -421,7 +471,8 @@
         "particle",
         "partner"
       ],
-      "text": "と"
+      "text": "と",
+      "reading": "と"
     },
     {
       "category": "connect",
@@ -429,7 +480,8 @@
         "particle",
         "topic"
       ],
-      "text": "は"
+      "text": "は",
+      "reading": "は"
     },
     {
       "category": "connect",
@@ -437,35 +489,40 @@
         "particle",
         "object"
       ],
-      "text": "を"
+      "text": "を",
+      "reading": "を"
     },
     {
       "category": "ending",
       "tags": [
         "polite"
       ],
-      "text": "です"
+      "text": "です",
+      "reading": "です"
     },
     {
       "category": "ending",
       "tags": [
         "polite"
       ],
-      "text": "ます"
+      "text": "ます",
+      "reading": "ます"
     },
     {
       "category": "ending",
       "tags": [
         "casual"
       ],
-      "text": "だよ"
+      "text": "だよ",
+      "reading": "だよ"
     },
     {
       "category": "ending",
       "tags": [
         "polite"
       ],
-      "text": "ですね"
+      "text": "ですね",
+      "reading": "ですね"
     },
     {
       "category": "ending",
@@ -473,74 +530,86 @@
         "casual",
         "cute"
       ],
-      "text": "なの"
+      "text": "なの",
+      "reading": "なの"
     },
     {
       "text": "ところで",
       "category": "connect",
       "tags": [
         "turn"
-      ]
+      ],
+      "reading": "ところで"
     },
     {
       "text": "実は",
       "category": "connect",
       "tags": [
         "turn"
-      ]
+      ],
+      "reading": "じつは"
     },
     {
       "text": "ちなみに",
       "category": "connect",
       "tags": [
         "turn"
-      ]
+      ],
+      "reading": "ちなみに"
     },
     {
       "text": "それより",
       "category": "connect",
       "tags": [
         "turn"
-      ]
+      ],
+      "reading": "それより"
     },
     {
       "text": "それから",
       "category": "connect",
-      "tags": []
+      "tags": [],
+      "reading": "それから"
     },
     {
       "text": "すると",
       "category": "connect",
-      "tags": []
+      "tags": [],
+      "reading": "すると"
     },
     {
       "text": "やっぱり",
       "category": "connect",
-      "tags": []
+      "tags": [],
+      "reading": "やっぱり"
     },
     {
       "text": "もし",
       "category": "connect",
-      "tags": []
+      "tags": [],
+      "reading": "もし"
     },
     {
       "text": "けど",
       "category": "connect",
       "tags": [
         "contrast"
-      ]
+      ],
+      "reading": "けど"
     },
     {
       "text": "のに",
       "category": "connect",
       "tags": [
         "contrast"
-      ]
+      ],
+      "reading": "のに"
     },
     {
       "text": "それに",
       "category": "connect",
-      "tags": []
+      "tags": [],
+      "reading": "それに"
     },
     {
       "text": "泉",
@@ -548,7 +617,8 @@
       "tags": [
         "nature",
         "beauty"
-      ]
+      ],
+      "reading": "いずみ"
     },
     {
       "text": "遺跡",
@@ -556,7 +626,8 @@
       "tags": [
         "adventure",
         "mystery"
-      ]
+      ],
+      "reading": "いせき"
     },
     {
       "text": "洞窟",
@@ -565,7 +636,8 @@
         "mining",
         "adventure",
         "ore"
-      ]
+      ],
+      "reading": "どうくつ"
     },
     {
       "text": "祭り",
@@ -573,7 +645,8 @@
       "tags": [
         "culture",
         "daily"
-      ]
+      ],
+      "reading": "まつり"
     },
     {
       "text": "温泉",
@@ -581,7 +654,8 @@
       "tags": [
         "daily",
         "nature"
-      ]
+      ],
+      "reading": "おんせん"
     },
     {
       "text": "ダンス",
@@ -589,7 +663,8 @@
       "tags": [
         "exercise",
         "culture"
-      ]
+      ],
+      "reading": "だんす"
     },
     {
       "text": "泳ぐ",
@@ -597,7 +672,8 @@
       "tags": [
         "exercise",
         "nature"
-      ]
+      ],
+      "reading": "およぐ"
     },
     {
       "text": "踊る",
@@ -605,7 +681,8 @@
       "tags": [
         "exercise",
         "culture"
-      ]
+      ],
+      "reading": "おどる"
     },
     {
       "text": "歌う",
@@ -613,7 +690,8 @@
       "tags": [
         "culture",
         "nature"
-      ]
+      ],
+      "reading": "うたう"
     },
     {
       "text": "手伝う",
@@ -621,14 +699,16 @@
       "tags": [
         "smithing",
         "daily"
-      ]
+      ],
+      "reading": "てつだう"
     },
     {
       "text": "ドキドキ",
       "category": "emotion",
       "tags": [
         "positive"
-      ]
+      ],
+      "reading": "どきどき"
     },
     {
       "text": "わくわく",
@@ -636,28 +716,32 @@
       "tags": [
         "positive",
         "adventure"
-      ]
+      ],
+      "reading": "わくわく"
     },
     {
       "text": "安心",
       "category": "emotion",
       "tags": [
         "positive"
-      ]
+      ],
+      "reading": "あんしん"
     },
     {
       "text": "かな",
       "category": "ending",
       "tags": [
         "casual"
-      ]
+      ],
+      "reading": "かな"
     },
     {
       "text": "よね",
       "category": "ending",
       "tags": [
         "casual"
-      ]
+      ],
+      "reading": "よね"
     },
     {
       "text": "が",
@@ -665,7 +749,8 @@
       "tags": [
         "particle",
         "subject"
-      ]
+      ],
+      "reading": "が"
     },
     {
       "text": "に",
@@ -673,7 +758,8 @@
       "tags": [
         "particle",
         "direction"
-      ]
+      ],
+      "reading": "に"
     },
     {
       "text": "も",
@@ -681,7 +767,8 @@
       "tags": [
         "particle",
         "also"
-      ]
+      ],
+      "reading": "も"
     },
     {
       "text": "の",
@@ -689,7 +776,8 @@
       "tags": [
         "particle",
         "possessive"
-      ]
+      ],
+      "reading": "の"
     },
     {
       "text": "で",
@@ -697,7 +785,8 @@
       "tags": [
         "particle",
         "place"
-      ]
+      ],
+      "reading": "で"
     },
     {
       "text": "へ",
@@ -705,7 +794,8 @@
       "tags": [
         "particle",
         "direction"
-      ]
+      ],
+      "reading": "へ"
     },
     {
       "text": "から",
@@ -713,7 +803,8 @@
       "tags": [
         "particle",
         "origin"
-      ]
+      ],
+      "reading": "から"
     },
     {
       "text": "まで",
@@ -721,7 +812,8 @@
       "tags": [
         "particle",
         "limit"
-      ]
+      ],
+      "reading": "まで"
     },
     {
       "text": "や",
@@ -729,7 +821,8 @@
       "tags": [
         "particle",
         "listing"
-      ]
+      ],
+      "reading": "や"
     },
     {
       "text": "ね",
@@ -737,21 +830,24 @@
       "tags": [
         "polite",
         "confirm"
-      ]
+      ],
+      "reading": "ね"
     },
     {
       "text": "よ",
       "category": "ending",
       "tags": [
         "emphasis"
-      ]
+      ],
+      "reading": "よ"
     },
     {
       "text": "か",
       "category": "ending",
       "tags": [
         "question"
-      ]
+      ],
+      "reading": "か"
     },
     {
       "text": "な",
@@ -759,7 +855,8 @@
       "tags": [
         "particle",
         "casual"
-      ]
+      ],
+      "reading": "な"
     },
     {
       "text": "ですか",
@@ -767,7 +864,8 @@
       "tags": [
         "polite",
         "question"
-      ]
+      ],
+      "reading": "ですか"
     },
     {
       "text": "してください",
@@ -775,31 +873,36 @@
       "tags": [
         "polite",
         "request"
-      ]
+      ],
+      "reading": "してください"
     },
     {
       "text": "リンゴ",
       "category": "target",
       "tags": [
         "food"
-      ]
+      ],
+      "reading": "りんご"
     },
     {
       "text": "こと",
       "category": "target",
-      "tags": []
+      "tags": [],
+      "reading": "こと"
     },
     {
       "text": "結婚",
       "category": "action",
       "tags": [
         "marriage"
-      ]
+      ],
+      "reading": "けっこん"
     },
     {
       "text": "あげる",
       "category": "action",
-      "tags": []
+      "tags": [],
+      "reading": "あげる"
     },
     {
       "text": "愛",
@@ -807,7 +910,8 @@
       "tags": [
         "positive",
         "like"
-      ]
+      ],
+      "reading": "あい"
     },
     {
       "text": "約束",
@@ -815,21 +919,24 @@
       "tags": [
         "positive",
         "together"
-      ]
+      ],
+      "reading": "やくそく"
     },
     {
       "text": "永遠に",
       "category": "connect",
       "tags": [
         "positive"
-      ]
+      ],
+      "reading": "えいえんに"
     },
     {
       "text": "誓う",
       "category": "action",
       "tags": [
         "positive"
-      ]
+      ],
+      "reading": "ちかう"
     },
     {
       "text": "大切",
@@ -837,14 +944,554 @@
       "tags": [
         "positive",
         "like"
-      ]
+      ],
+      "reading": "たいせつ"
     },
     {
       "text": "守る",
       "category": "action",
       "tags": [
         "positive"
-      ]
+      ],
+      "reading": "まもる"
+    },
+    {
+      "text": "笑顔",
+      "category": "target",
+      "tags": [
+        "positive",
+        "like"
+      ],
+      "reading": "えがお"
+    },
+    {
+      "text": "声",
+      "category": "target",
+      "tags": [
+        "like"
+      ],
+      "reading": "こえ"
+    },
+    {
+      "text": "髪",
+      "category": "target",
+      "tags": [
+        "beauty"
+      ],
+      "reading": "かみ"
+    },
+    {
+      "text": "目",
+      "category": "target",
+      "tags": [],
+      "reading": "め"
+    },
+    {
+      "text": "手",
+      "category": "target",
+      "tags": [],
+      "reading": "て"
+    },
+    {
+      "text": "心",
+      "category": "target",
+      "tags": [
+        "like"
+      ],
+      "reading": "こころ"
+    },
+    {
+      "text": "気持ち",
+      "category": "target",
+      "tags": [
+        "like"
+      ],
+      "reading": "きもち"
+    },
+    {
+      "text": "言葉",
+      "category": "target",
+      "tags": [
+        "culture"
+      ],
+      "reading": "ことば"
+    },
+    {
+      "text": "時間",
+      "category": "target",
+      "tags": [
+        "daily"
+      ],
+      "reading": "じかん"
+    },
+    {
+      "text": "今日",
+      "category": "target",
+      "tags": [
+        "daily"
+      ],
+      "reading": "きょう"
+    },
+    {
+      "text": "明日",
+      "category": "target",
+      "tags": [
+        "daily"
+      ],
+      "reading": "あした"
+    },
+    {
+      "text": "空",
+      "category": "target",
+      "tags": [
+        "nature"
+      ],
+      "reading": "そら"
+    },
+    {
+      "text": "海",
+      "category": "target",
+      "tags": [
+        "nature"
+      ],
+      "reading": "うみ"
+    },
+    {
+      "text": "山",
+      "category": "target",
+      "tags": [
+        "nature"
+      ],
+      "reading": "やま"
+    },
+    {
+      "text": "川",
+      "category": "target",
+      "tags": [
+        "nature"
+      ],
+      "reading": "かわ"
+    },
+    {
+      "text": "雨",
+      "category": "target",
+      "tags": [
+        "nature"
+      ],
+      "reading": "あめ"
+    },
+    {
+      "text": "雪",
+      "category": "target",
+      "tags": [
+        "nature"
+      ],
+      "reading": "ゆき"
+    },
+    {
+      "text": "月",
+      "category": "target",
+      "tags": [
+        "nature"
+      ],
+      "reading": "つき"
+    },
+    {
+      "text": "光",
+      "category": "target",
+      "tags": [
+        "nature",
+        "magic"
+      ],
+      "reading": "ひかり"
+    },
+    {
+      "text": "風",
+      "category": "target",
+      "tags": [
+        "nature"
+      ],
+      "reading": "かぜ"
+    },
+    {
+      "text": "鳥",
+      "category": "target",
+      "tags": [
+        "nature"
+      ],
+      "reading": "とり"
+    },
+    {
+      "text": "猫",
+      "category": "target",
+      "tags": [
+        "nature"
+      ],
+      "reading": "ねこ"
+    },
+    {
+      "text": "犬",
+      "category": "target",
+      "tags": [
+        "nature"
+      ],
+      "reading": "いぬ"
+    },
+    {
+      "text": "町",
+      "category": "target",
+      "tags": [
+        "daily",
+        "culture"
+      ],
+      "reading": "まち"
+    },
+    {
+      "text": "店",
+      "category": "target",
+      "tags": [
+        "daily",
+        "shopping"
+      ],
+      "reading": "みせ"
+    },
+    {
+      "text": "家",
+      "category": "target",
+      "tags": [
+        "daily"
+      ],
+      "reading": "いえ"
+    },
+    {
+      "text": "夢",
+      "category": "target",
+      "tags": [
+        "mystery",
+        "like"
+      ],
+      "reading": "ゆめ"
+    },
+    {
+      "text": "思い出",
+      "category": "target",
+      "tags": [
+        "culture",
+        "like"
+      ],
+      "reading": "おもいで"
+    },
+    {
+      "text": "手紙",
+      "category": "target",
+      "tags": [
+        "culture"
+      ],
+      "reading": "てがみ"
+    },
+    {
+      "text": "贈り物",
+      "category": "target",
+      "tags": [
+        "like",
+        "culture"
+      ],
+      "reading": "おくりもの"
+    },
+    {
+      "text": "仕事",
+      "category": "target",
+      "tags": [
+        "daily"
+      ],
+      "reading": "しごと"
+    },
+    {
+      "text": "力",
+      "category": "target",
+      "tags": [
+        "exercise"
+      ],
+      "reading": "ちから"
+    },
+    {
+      "text": "素敵",
+      "category": "emotion",
+      "tags": [
+        "positive",
+        "beauty",
+        "like"
+      ],
+      "reading": "すてき"
+    },
+    {
+      "text": "優しい",
+      "category": "emotion",
+      "tags": [
+        "positive",
+        "like"
+      ],
+      "reading": "やさしい"
+    },
+    {
+      "text": "暖かい",
+      "category": "emotion",
+      "tags": [
+        "positive",
+        "nature"
+      ],
+      "reading": "あたたかい"
+    },
+    {
+      "text": "涼しい",
+      "category": "emotion",
+      "tags": [
+        "positive",
+        "nature"
+      ],
+      "reading": "すずしい"
+    },
+    {
+      "text": "明るい",
+      "category": "emotion",
+      "tags": [
+        "positive"
+      ],
+      "reading": "あかるい"
+    },
+    {
+      "text": "静か",
+      "category": "emotion",
+      "tags": [
+        "positive",
+        "nature"
+      ],
+      "reading": "しずか"
+    },
+    {
+      "text": "元気",
+      "category": "emotion",
+      "tags": [
+        "positive"
+      ],
+      "reading": "げんき"
+    },
+    {
+      "text": "幸せ",
+      "category": "emotion",
+      "tags": [
+        "positive",
+        "like"
+      ],
+      "reading": "しあわせ"
+    },
+    {
+      "text": "寂しい",
+      "category": "emotion",
+      "tags": [
+        "negative"
+      ],
+      "reading": "さびしい"
+    },
+    {
+      "text": "悲しい",
+      "category": "emotion",
+      "tags": [
+        "negative"
+      ],
+      "reading": "かなしい"
+    },
+    {
+      "text": "心配",
+      "category": "emotion",
+      "tags": [
+        "negative"
+      ],
+      "reading": "しんぱい"
+    },
+    {
+      "text": "大丈夫",
+      "category": "emotion",
+      "tags": [
+        "positive"
+      ],
+      "reading": "だいじょうぶ"
+    },
+    {
+      "text": "話す",
+      "category": "action",
+      "tags": [
+        "culture"
+      ],
+      "reading": "はなす"
+    },
+    {
+      "text": "聞く",
+      "category": "action",
+      "tags": [
+        "culture"
+      ],
+      "reading": "きく"
+    },
+    {
+      "text": "笑う",
+      "category": "action",
+      "tags": [
+        "positive"
+      ],
+      "reading": "わらう"
+    },
+    {
+      "text": "会う",
+      "category": "action",
+      "tags": [
+        "together"
+      ],
+      "reading": "あう"
+    },
+    {
+      "text": "知る",
+      "category": "action",
+      "tags": [],
+      "reading": "しる"
+    },
+    {
+      "text": "思う",
+      "category": "action",
+      "tags": [],
+      "reading": "おもう"
+    },
+    {
+      "text": "教える",
+      "category": "action",
+      "tags": [],
+      "reading": "おしえる"
+    },
+    {
+      "text": "遊ぶ",
+      "category": "action",
+      "tags": [
+        "exercise",
+        "culture"
+      ],
+      "reading": "あそぶ"
+    },
+    {
+      "text": "歩く",
+      "category": "action",
+      "tags": [
+        "move",
+        "exercise"
+      ],
+      "reading": "あるく"
+    },
+    {
+      "text": "走る",
+      "category": "action",
+      "tags": [
+        "move",
+        "exercise"
+      ],
+      "reading": "はしる"
+    },
+    {
+      "text": "寝る",
+      "category": "action",
+      "tags": [
+        "daily"
+      ],
+      "reading": "ねる"
+    },
+    {
+      "text": "起きる",
+      "category": "action",
+      "tags": [
+        "daily"
+      ],
+      "reading": "おきる"
+    },
+    {
+      "text": "買う",
+      "category": "action",
+      "tags": [
+        "shopping"
+      ],
+      "reading": "かう"
+    },
+    {
+      "text": "書く",
+      "category": "action",
+      "tags": [
+        "culture"
+      ],
+      "reading": "かく"
+    },
+    {
+      "text": "会いたい",
+      "category": "action",
+      "tags": [
+        "together",
+        "like",
+        "want"
+      ],
+      "reading": "あいたい"
+    },
+    {
+      "text": "話したい",
+      "category": "action",
+      "tags": [
+        "want",
+        "culture"
+      ],
+      "reading": "はなしたい"
+    },
+    {
+      "text": "すごく",
+      "category": "degree",
+      "tags": [],
+      "reading": "すごく"
+    },
+    {
+      "text": "もっと",
+      "category": "degree",
+      "tags": [],
+      "reading": "もっと"
+    },
+    {
+      "text": "本当に",
+      "category": "degree",
+      "tags": [
+        "positive"
+      ],
+      "reading": "ほんとうに"
+    },
+    {
+      "text": "たくさん",
+      "category": "degree",
+      "tags": [],
+      "reading": "たくさん"
+    },
+    {
+      "text": "いつも",
+      "category": "connect",
+      "tags": [
+        "positive"
+      ],
+      "reading": "いつも"
+    },
+    {
+      "text": "たまに",
+      "category": "connect",
+      "tags": [],
+      "reading": "たまに"
+    },
+    {
+      "text": "ぜひ",
+      "category": "connect",
+      "tags": [
+        "positive"
+      ],
+      "reading": "ぜひ"
     }
   ]
 }
