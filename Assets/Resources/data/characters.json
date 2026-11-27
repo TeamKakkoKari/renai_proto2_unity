@@ -31,6 +31,7 @@
    "questions": [
     {
      "expected_polarity": "positive",
+     "short_ok": true,
      "text": "はじめまして。わたしはリーリア。この森は好きですか？",
      "topic_tags": [
       "nature",
@@ -48,6 +49,7 @@
     },
     {
      "expected_polarity": "positive",
+     "short_ok": true,
      "text": "一緒に森を見に行きませんか？",
      "topic_tags": [
       "nature",
@@ -57,6 +59,7 @@
     {
      "expected_polarity": "any",
      "min_affection": 20,
+     "short_ok": true,
      "text": "（友達だけに）古い歌を歌いますね。聞いてくれますか？",
      "topic_tags": [
       "culture",
@@ -73,6 +76,7 @@
     },
     {
      "expected_polarity": "positive",
+     "short_ok": true,
      "text": "薬草が足りなくて困っているの。……手伝って、くれますか？",
      "topic_tags": [
       "plant",
@@ -89,6 +93,7 @@
     },
     {
      "expected_polarity": "positive",
+     "short_ok": true,
      "text": "来年も、また一緒に見られたらいいですね。",
      "topic_tags": [
       "together"
@@ -136,9 +141,13 @@
      "あの……今は、そのお話ではないのですが……",
      "えっと、話題が変わってしまいましたね"
     ],
+    "brief": [
+     "うん、よかったです",
+     "はい。……なんだか、ほっとしました"
+    ],
     "minimal": [
-     "そうですか……もう少し、あなたの気持ちを聞きたいです",
-     "それだけですか？ 少し寂しいです"
+     "そうですか……もう少し、あなたの気持ちも聞きたいです",
+     "……うん。分かりました"
     ],
     "clarify": [
      "ごめんなさい、どういう意味かしら…？もう少しだけ、ことばを足してくれる？",
@@ -218,6 +227,7 @@
    "questions": [
     {
      "expected_polarity": "positive",
+     "short_ok": true,
      "text": "おう、よく来たな！鉱石は好きか？",
      "topic_tags": [
       "ore",
@@ -234,6 +244,7 @@
     },
     {
      "expected_polarity": "positive",
+     "short_ok": true,
      "text": "一緒に酒を飲みたいか？",
      "topic_tags": [
       "drink"
@@ -242,6 +253,7 @@
     {
      "expected_polarity": "any",
      "min_affection": 20,
+     "short_ok": true,
      "text": "（友達だけに）珍しい石を見つけた。見たいか？",
      "topic_tags": [
       "rare",
@@ -274,9 +286,13 @@
      "おい、今の話と関係ねえぞ",
      "話が飛んでるぞ。落ち着けって"
     ],
+    "brief": [
+     "おう、そうか！",
+     "へへ、話が早くて助かるぜ"
+    ],
     "minimal": [
-     "返事だけか。もっと気持ちを言えよ",
-     "素っ気ないなあ。言いたいことがあるだろ"
+     "返事だけか。まあ、いいけどよ",
+     "おう……もう少し話してくれてもいいんだぜ"
     ],
     "clarify": [
      "ん？どういう意味だ。もっとはっきり言ってくれ",
@@ -343,6 +359,7 @@
    "questions": [
     {
      "expected_polarity": "positive",
+     "short_ok": true,
      "text": "よっ！冒険は好きか！？",
      "topic_tags": [
       "adventure"
@@ -357,6 +374,7 @@
     },
     {
      "expected_polarity": "positive",
+     "short_ok": true,
      "text": "一緒に狩りに行きたいか？",
      "topic_tags": [
       "hunting",
@@ -366,6 +384,7 @@
     {
      "expected_polarity": "any",
      "min_affection": 20,
+     "short_ok": true,
      "text": "（友達だけに）サバンナの星は見たことあるか？",
      "topic_tags": [
       "nature"
@@ -397,9 +416,13 @@
      "え、今それ関係あるか？",
      "おーい、話がどっか行ってるぞ！"
     ],
+    "brief": [
+     "おっ、決まりだな！",
+     "よし！ その返事を待ってたぜ"
+    ],
     "minimal": [
-     "それだけかよ！ もっと話そうぜ！",
-     "一言だけじゃつまんないなあ"
+     "それだけかよ。まあいっか！",
+     "うーん、もっと話したいけどな"
     ],
     "clarify": [
      "んん？どういうことだ？もっと聞かせてくれ！",
@@ -468,6 +491,7 @@
    "questions": [
     {
      "expected_polarity": "positive",
+     "short_ok": true,
      "text": "こんにちは！買い物は好きですか？",
      "topic_tags": [
       "shopping"
@@ -483,6 +507,7 @@
     },
     {
      "expected_polarity": "positive",
+     "short_ok": true,
      "text": "一緒に本を読みませんか？",
      "topic_tags": [
       "culture"
@@ -491,6 +516,7 @@
     {
      "expected_polarity": "any",
      "min_affection": 20,
+     "short_ok": true,
      "text": "（友達だけに）新しい文化祭の話、聞きたいですか？",
      "topic_tags": [
       "culture"
@@ -522,9 +548,13 @@
      "あれ、今の話と違うような……",
      "ごめん、話が急に変わってついていけない"
     ],
+    "brief": [
+     "うん、よかった！",
+     "ほんと？ 嬉しいな"
+    ],
     "minimal": [
-     "それだけ……？ もう少し教えてほしいな",
-     "うーん、気持ちが見えなくて寂しいかも"
+     "それだけ……？ うん、分かった",
+     "もう少し教えてくれたら嬉しいけどな"
     ],
     "clarify": [
      "え、どういう意味？もうちょっと詳しく聞いていい？",
@@ -596,6 +626,7 @@
    "questions": [
     {
      "expected_polarity": "positive",
+     "short_ok": true,
      "text": "ねえねえ！魔法は好き？",
      "topic_tags": [
       "magic"
@@ -603,6 +634,7 @@
     },
     {
      "expected_polarity": "any",
+     "short_ok": true,
      "text": "昨日の不思議な光、見た？",
      "topic_tags": [
       "mystery",
@@ -611,6 +643,7 @@
     },
     {
      "expected_polarity": "positive",
+     "short_ok": true,
      "text": "一緒に星を見たい？",
      "topic_tags": [
       "nature",
@@ -620,6 +653,7 @@
     {
      "expected_polarity": "any",
      "min_affection": 20,
+     "short_ok": true,
      "text": "（友達だけに）珍しい石の秘密、知りたい？",
      "topic_tags": [
       "rare",
@@ -652,9 +686,13 @@
      "あれれ？ お話が飛んじゃったの",
      "今はその話じゃないの"
     ],
+    "brief": [
+     "ほんと！？ やったの！",
+     "うん！ ぴぴ、嬉しいの！"
+    ],
     "minimal": [
      "それだけなの？ もっとお話したいの",
-     "ぴぴ、もっと聞きたいの！"
+     "うーん……わかったの"
     ],
     "clarify": [
      "ええと、どういうこと？ピピにはむずかしいよ〜",

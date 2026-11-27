@@ -1385,8 +1385,8 @@ public class MainGame : MonoBehaviour
         // シーン生成時（v22）の「Prototype 2 v22 (Unity版)」のまま残ってしまう。
         // 戻り値の Text に直接テキストを入れて、実行中の版数を必ず表示する。
         // これで、タイトル画面右下の版数を見れば、どの版のコードで動いているか分かる。
-        var versionLabel = MkLabelA(pt, "Prototype 2 v34 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, 1, 0, TextAnchor.UpperRight, "VersionLabel");
-        versionLabel.text = "Prototype 2 v34 (Unity版)";
+        var versionLabel = MkLabelA(pt, "Prototype 2 v35 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, 1, 0, TextAnchor.UpperRight, "VersionLabel");
+        versionLabel.text = "Prototype 2 v35 (Unity版)";
         versionLabel.fontSize = 13;
     }
 
@@ -2472,18 +2472,21 @@ public class MainGame : MonoBehaviour
         bool confused = J.GetBool(res, "confused");
         bool offtopic = J.GetBool(res, "offtopic");
         bool minimal = J.GetBool(res, "minimal");
+        bool brief = J.GetBool(res, "brief");
         // 反応の優先順位: 崩れた文 → 現実には難しい関係（笑い） → 聞き返し →
         // 話題逸脱（質問の形のときは通常反応） → 一言返事 → 好感度段位
         string rkey = key;
         if (confused) rkey = "confused";
         else if (ana.absurd) rkey = "absurd";
         else if (ana.clarify) rkey = "clarify";
+        else if (brief) rkey = "brief";
         else if (offtopic && !ana.questionForm) rkey = "offtopic";
         else if (minimal) rkey = "minimal";
         // 表情は反応キーに連動させる
         if (rkey == "confused" || rkey == "offtopic" || rkey == "clarify") SetExpression("neutral");
         else if (rkey == "absurd") SetExpression("joy");
-        else if (rkey == "minimal") SetExpression("sad");
+        else if (rkey == "brief") SetExpression("joy");
+        else if (rkey == "minimal") SetExpression("neutral");
         else
         {
             string expr = "default";

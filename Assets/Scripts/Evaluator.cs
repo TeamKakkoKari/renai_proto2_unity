@@ -66,7 +66,7 @@ public static class Evaluator
     }
 
     private static Dictionary<string, object> Result(int score, List<string> reasons, string polarity,
-        bool sceneChange, bool confused, int violations, bool offtopic, bool minimal)
+        bool sceneChange, bool confused, int violations, bool offtopic, bool minimal, bool brief = false)
     {
         return new Dictionary<string, object>
         {
@@ -78,6 +78,7 @@ public static class Evaluator
             { "violations", violations },
             { "offtopic", offtopic },
             { "minimal", minimal },
+            { "brief", brief },
         };
     }
 
@@ -137,6 +138,15 @@ public static class Evaluator
             if (mexp == "positive" || mexp == "negative")
             {
                 mscore = mpol == mexp ? J.GetInt(cfg, "minimal_match", 2) : J.GetInt(cfg, "minimal_mismatch", -4);
+            }
+            // 短答が質問への立派な答えになる場合（Yes/Noで答えられる質問への肯定）は
+            // 落胆ではなく穏やかな受け止め（brief）にする。点数の小ささはそのまま
+            bool briefOk = J.GetBool(question, "short_ok") && cats.Contains("affirm") && mexp != "negative";
+            if (briefOk)
+            {
+                return Result(mscore,
+                    new List<string> { "短いけれど、質問への立派な答え (" + PD(mscore) + ")" },
+                    mpol, false, false, 0, false, false, true);
             }
             return Result(mscore,
                 new List<string> { "一言だけの返事で、気持ちはあまり伝わらなかった (" + PD(mscore) + ")" },
