@@ -87,6 +87,8 @@ public class MainGame : MonoBehaviour
     private Text evalTrustLabel;
     private RawImage evalMini;
     private string searchText = "";
+    private InputField searchField;
+    private readonly List<Dictionary<string, object>> paletteRecommended = new List<Dictionary<string, object>>();
     private RectTransform msgPanel;
     private GameObject askGroup;
     private Text timerLabel;
@@ -1241,11 +1243,30 @@ public class MainGame : MonoBehaviour
         var field = GetOrAdd<InputField>(go);
         var textComp = MkLabel(go.transform, "", 15, new Color(0.25f, 0.22f, 0.18f), 10, 0, w - 16, h, TextAnchor.MiddleLeft, "SearchText");
         textComp.supportRichText = false;
-        var ph = MkLabel(go.transform, "🔍 キーワードで検索", 14, new Color(0.35f, 0.32f, 0.28f), 10, 0, w - 16, h, TextAnchor.MiddleLeft, "SearchPlaceholder");
+        var ph = MkLabel(go.transform, "✏ 打つと単語に変換", 14, new Color(0.35f, 0.32f, 0.28f), 10, 0, w - 16, h, TextAnchor.MiddleLeft, "SearchPlaceholder");
         ph.color = new Color(0.35f, 0.32f, 0.28f); // v25: シーン再利用時も色を直す
         field.textComponent = textComp;
         field.placeholder = ph;
         field.onValueChanged.AddListener((string s) => { searchText = s; palettePage = 0; RenderPaletteGrid(); });
+        searchField = field;
+        // 案1「打って変換」: Enterで入力を終えたら、打った文字を単語に変換して文に加える
+        field.onEndEdit.AddListener((string s) => ConvertSearchToWords());
+        LightButton(MkButtonA(parent, "⌨ 打った言葉を単語にする", 13, x, y + h + 4, w, 24, () => ConvertSearchToWords(), 0, 0, "SearchConvertButton"));
+    }
+
+    // 打った文字を語彙の単語列に変換して、発言のチップとして追加する。
+    // 変換できなかった部分は入力欄に残し、直したりパレットから探したりできるようにする
+    private void ConvertSearchToWords()
+    {
+        if (searchField == null || phase != "ask") return;
+        string s = searchField.text;
+        if (string.IsNullOrEmpty(s)) return;
+        string unmatched;
+        var words = WordSegmenter.Segment(s, J.GetList(dataWords, "words"), out unmatched);
+        if (words.Count == 0) return;
+        foreach (var w in words) AddWord(w);
+        searchField.text = unmatched;
+        RefreshSentence();
     }
 
     private void LayoutFrame(bool ask, bool animate)
@@ -1385,8 +1406,8 @@ public class MainGame : MonoBehaviour
         // シーン生成時（v22）の「Prototype 2 v22 (Unity版)」のまま残ってしまう。
         // 戻り値の Text に直接テキストを入れて、実行中の版数を必ず表示する。
         // これで、タイトル画面右下の版数を見れば、どの版のコードで動いているか分かる。
-        var versionLabel = MkLabelA(pt, "Prototype 2 v35 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, 1, 0, TextAnchor.UpperRight, "VersionLabel");
-        versionLabel.text = "Prototype 2 v35 (Unity版)";
+        var versionLabel = MkLabelA(pt, "Prototype 2 v36 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, 1, 0, TextAnchor.UpperRight, "VersionLabel");
+        versionLabel.text = "Prototype 2 v36 (Unity版)";
         versionLabel.fontSize = 13;
     }
 
@@ -2039,6 +2060,8 @@ public class MainGame : MonoBehaviour
         SetFittedText(resultLabel, "単語を選んで文章を作りましょう。時間切れは無言 (-10) です。", 13, 10);
         timeLeft = timeLimit;
         UpdateTimerUi();
+        activeCategory = "__rec";
+        palettePage = 0;
         BuildPalette(OfferedWords(activeQuestion));
         RefreshSentence();
     }
@@ -2102,6 +2125,67 @@ public class MainGame : MonoBehaviour
             }
             list.Add(w);
         }
+        // おすすめ（案3）: この質問の話題に合う内容語→彼女の好きな話題の内容語→文の基本語。
+        // 1ページ（24語）に収まる量にして、探す手間をなくす
+        paletteRecommended.Clear();
+        {
+            var recAdded = new HashSet<string>();
+            var byText = new Dictionary<string, Dictionary<string, object>>();
+            foreach (var wo in J.GetList(dataWords, "words"))
+            {
+                var w = J.Dict(wo);
+                string t = J.GetStr(w, "text");
+                if (t != "" && !byText.ContainsKey(t)) byText[t] = w;
+            }
+            var q = activeQuestion ?? new Dictionary<string, object>();
+            var topicTags = new HashSet<string>();
+            foreach (var t in J.List(J.Get(q, "topic_tags"))) topicTags.Add(J.Str(t));
+            var likedTags = new HashSet<string>();
+            foreach (var t in J.List(J.Get(currentChar, "liked_tags"))) likedTags.Add(J.Str(t));
+            // 優先順: 話題の内容語（最大8語）→ 文の基本語 → 好きな話題の内容語。
+            // 基本語13語が上限24語で切れないよう、話題の内容語に枠を設ける
+            int topicAdded = 0;
+            foreach (var tagSet in new List<HashSet<string>> { topicTags, null, likedTags })
+            {
+                if (tagSet == null)
+                {
+                    var basics0 = new List<string> { "はい", "もちろん", "いいえ", "あなた", "私", "は", "が", "を", "とても", "な", "です", "ます", "ですね" };
+                    foreach (var bt in basics0)
+                    {
+                        Dictionary<string, object> bw;
+                        if (byText.TryGetValue(bt, out bw) && !recAdded.Contains(bt))
+                        {
+                            paletteRecommended.Add(bw);
+                            recAdded.Add(bt);
+                        }
+                    }
+                    continue;
+                }
+                foreach (var wo in J.GetList(dataWords, "words"))
+                {
+                    var w = J.Dict(wo);
+                    string cat = J.GetStr(w, "category");
+                    if (cat != "target" && cat != "emotion" && cat != "action") continue;
+                    string text = J.GetStr(w, "text");
+                    if (recAdded.Contains(text)) continue;
+                    bool hit = false;
+                    foreach (var tg in J.List(J.Get(w, "tags"))) if (tagSet.Contains(J.Str(tg))) { hit = true; break; }
+                    if (hit)
+                    {
+                        if (tagSet == topicTags)
+                        {
+                            if (topicAdded >= 8) continue;
+                            topicAdded++;
+                        }
+                        paletteRecommended.Add(w);
+                        recAdded.Add(text);
+                    }
+                }
+            }
+            if (paletteRecommended.Count > 24)
+                paletteRecommended.RemoveRange(24, paletteRecommended.Count - 24);
+        }
+
         // タブは words.json の categories の順に並べる
         var catOrder = new List<string>();
         var catLabels = new Dictionary<string, string>();
@@ -2119,6 +2203,7 @@ public class MainGame : MonoBehaviour
 
         // タブ: すべて / お気に入り / カテゴリー別
         var tabDefs = new List<KeyValuePair<string, string>>();
+        tabDefs.Add(new KeyValuePair<string, string>("__rec", "おすすめ"));
         tabDefs.Add(new KeyValuePair<string, string>("__all", "すべて"));
         tabDefs.Add(new KeyValuePair<string, string>("__fav", "★ お気に入り"));
         foreach (var cat in catOrder)
@@ -2150,8 +2235,8 @@ public class MainGame : MonoBehaviour
             x += tw + 6f;
         }
         if (activeCategory == "" ||
-            (activeCategory != "__all" && activeCategory != "__fav" && !paletteGroups.ContainsKey(activeCategory)))
-            activeCategory = "__all";
+            (activeCategory != "__rec" && activeCategory != "__all" && activeCategory != "__fav" && !paletteGroups.ContainsKey(activeCategory)))
+            activeCategory = "__rec";
         RefreshTabs();
         RenderPaletteGrid();
     }
@@ -2194,6 +2279,10 @@ public class MainGame : MonoBehaviour
                 var w = J.Dict(wo);
                 if (J.GetStr(w, "text").Contains(searchText)) items.Add(w);
             }
+        }
+        else if (activeCategory == "__rec")
+        {
+            items = new List<Dictionary<string, object>>(paletteRecommended);
         }
         else if (activeCategory == "__all")
         {
