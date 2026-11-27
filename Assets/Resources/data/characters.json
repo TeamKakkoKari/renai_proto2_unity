@@ -10,7 +10,9 @@
     "nature",
     "forest",
     "plant",
-    "beauty"
+    "beauty",
+    "together",
+    "partner"
    ],
    "liked_words": [
     "森",
@@ -59,6 +61,53 @@
      "topic_tags": [
       "culture",
       "nature"
+     ]
+    },
+    {
+     "expected_polarity": "positive",
+     "text": "わたしはこの森の守り手です。あなたは、どうしてこの森へ来たのですか？",
+     "topic_tags": [
+      "forest",
+      "adventure"
+     ]
+    },
+    {
+     "expected_polarity": "positive",
+     "text": "薬草が足りなくて困っているの。……手伝って、くれますか？",
+     "topic_tags": [
+      "plant",
+      "nature"
+     ]
+    },
+    {
+     "expected_polarity": "any",
+     "text": "今夜は星祭り。空がとても綺麗ですよ。あなたは、どう思いますか？",
+     "topic_tags": [
+      "beauty",
+      "nature"
+     ]
+    },
+    {
+     "expected_polarity": "positive",
+     "text": "来年も、また一緒に見られたらいいですね。",
+     "topic_tags": [
+      "together"
+     ]
+    },
+    {
+     "expected_polarity": "positive",
+     "text": "あの……あなたにとって、わたしはどんな存在ですか？",
+     "topic_tags": [
+      "like",
+      "partner"
+     ]
+    },
+    {
+     "expected_polarity": "positive",
+     "text": "誓いの言葉を、聞かせてください。",
+     "topic_tags": [
+      "marriage",
+      "together"
      ]
     }
    ],

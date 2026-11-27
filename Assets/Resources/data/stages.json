@@ -1,5 +1,18 @@
 {
  "comment": "ステージ追加はここに1件足し、characters.jsonでそのstage_idを指定するだけです。",
+ "backgrounds": {
+  "bg_forest": "res://assets/bg_forest.png",
+  "bg_forest_deep": "",
+  "bg_festival": "",
+  "bg_hill_sunset": "",
+  "bg_shrine": "",
+  "bg_village": "",
+  "bg_lake": "",
+  "bg_ruins": "",
+  "bg_forest_morning": "",
+  "bg_festival_day": "",
+  "bg_shrine_in": ""
+ },
  "stages": [
   {
    "color": "#2d5a3d",

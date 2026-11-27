@@ -799,6 +799,51 @@
       "text": "あげる",
       "category": "action",
       "tags": []
+    },
+    {
+      "text": "愛",
+      "category": "target",
+      "tags": [
+        "positive",
+        "like"
+      ]
+    },
+    {
+      "text": "約束",
+      "category": "target",
+      "tags": [
+        "positive",
+        "together"
+      ]
+    },
+    {
+      "text": "永遠に",
+      "category": "connect",
+      "tags": [
+        "positive"
+      ]
+    },
+    {
+      "text": "誓う",
+      "category": "action",
+      "tags": [
+        "positive"
+      ]
+    },
+    {
+      "text": "大切",
+      "category": "emotion",
+      "tags": [
+        "positive",
+        "like"
+      ]
+    },
+    {
+      "text": "守る",
+      "category": "action",
+      "tags": [
+        "positive"
+      ]
     }
   ]
 }

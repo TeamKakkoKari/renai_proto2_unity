@@ -40,6 +40,21 @@ public class MainGame : MonoBehaviour
     private const float TypeSpeed = 30f;
     private string fullText = "";
     private bool pendingTurn = false;
+    // ルート進行（フェーズ制ストーリー用。stories.json に phases を持つキャラだけ使う）
+    private Dictionary<string, string> routePhase = new Dictionary<string, string>();
+    private Dictionary<string, HashSet<string>> routeFlags = new Dictionary<string, HashSet<string>>();
+    private Dictionary<string, string> routeDone = new Dictionary<string, string>();
+    private Dictionary<string, string> backgrounds = new Dictionary<string, string>();
+    private bool phaseMode = false;
+    private Dictionary<string, object> currentPhase = new Dictionary<string, object>();
+    private Dictionary<string, object> activeBeat = new Dictionary<string, object>();
+    private GameObject resultScreen;
+    private Text resultTitleLabel;
+    private Text resultBodyLabel;
+    private int runAsks = 0;
+    private int runGreat = 0;
+    private int runGood = 0;
+    private string pendingEnding = "";
     private string screen = "title"; // title | map | game
     private System.Random rng = new System.Random();
 
@@ -225,6 +240,8 @@ public class MainGame : MonoBehaviour
         foreach (var c in J.GetList(chars, "characters")) characters.Add(J.Dict(c));
         foreach (var s in J.GetList(stgs, "stages")) stages.Add(J.Dict(s));
         stories = J.GetDict(strs, "stories");
+        var bgd = J.GetDict(stgs, "backgrounds");
+        foreach (var kv in bgd) backgrounds[kv.Key] = J.GetStr(bgd, kv.Key);
         evalCfg = J.GetDict(eval, "scores");
         affectionLevels = J.GetList(eval, "affection_levels");
         var tl = J.Get(eval, "time_limit_seconds");
@@ -260,6 +277,16 @@ public class MainGame : MonoBehaviour
                     var td = J.GetDict(root, "trust");
                     foreach (var kv in td) trust[kv.Key] = J.GetInt(td, kv.Key);
                     foreach (var fo in J.GetList(root, "favorites")) favoriteWords.Add(J.Str(fo));
+                    var rd = J.GetDict(root, "route");
+                    foreach (var kv in rd)
+                    {
+                        var rv = J.GetDict(rd, kv.Key);
+                        routePhase[kv.Key] = J.GetStr(rv, "phase");
+                        routeDone[kv.Key] = J.GetStr(rv, "done");
+                        var fs = new HashSet<string>();
+                        foreach (var f in J.GetList(rv, "flags")) fs.Add(J.Str(f));
+                        routeFlags[kv.Key] = fs;
+                    }
                 }
                 // 旧形式（好感度だけのフラットなJSON）もそのまま読み込める
                 foreach (var kv in aff) affection[kv.Key] = J.GetInt(aff, kv.Key);
@@ -280,11 +307,25 @@ public class MainGame : MonoBehaviour
             foreach (var kv in trust) tp.Add("\"" + kv.Key + "\":" + kv.Value);
             var fv = new List<string>();
             foreach (var t in favoriteWords) fv.Add("\"" + t + "\"");
+            var rp = new List<string>();
+            var rkeys = new HashSet<string>();
+            foreach (var k in routePhase.Keys) rkeys.Add(k);
+            foreach (var k in routeDone.Keys) rkeys.Add(k);
+            foreach (var k in routeFlags.Keys) rkeys.Add(k);
+            foreach (var k in rkeys)
+            {
+                string pv; if (!routePhase.TryGetValue(k, out pv)) pv = "";
+                string dv; if (!routeDone.TryGetValue(k, out dv)) dv = "";
+                var fl = new List<string>();
+                HashSet<string> fset;
+                if (routeFlags.TryGetValue(k, out fset)) foreach (var f in fset) fl.Add("\"" + f + "\"");
+                rp.Add("\"" + k + "\":{\"phase\":\"" + pv + "\",\"done\":\"" + dv + "\",\"flags\":[" + string.Join(",", fl) + "]}");
+            }
             File.WriteAllText(SavePath,
                 "{\"affection\":{" + string.Join(",", ap)
                 + "},\"fun\":{" + string.Join(",", fp)
                 + "},\"trust\":{" + string.Join(",", tp)
-                + "},\"favorites\":[" + string.Join(",", fv) + "]}");
+                + "},\"favorites\":[" + string.Join(",", fv) + "],\"route\":{" + string.Join(",", rp) + "}}");
         }
         catch (Exception) { /*保存に失敗してもゲームは続行*/ }
     }
@@ -1072,6 +1113,7 @@ public class MainGame : MonoBehaviour
         BuildEvalCard();
         BuildTitleScreen();
         BuildMapScreen();
+        BuildResultScreen();
         BuildBacklog();
     }
 
@@ -1290,6 +1332,25 @@ public class MainGame : MonoBehaviour
         rt.sizeDelta = new Vector2(tex.width * scale, tex.height * scale);
     }
 
+    private void BuildResultScreen()
+    {
+        // リザルト画面は v31 で追加した新規画面。シーン生成済みUIにまだ含まれていないため、
+        // この画面だけはレイアウトをコードで確定させる（preserveLayout を一時的に外す）。
+        // ユーザーが「UIをシーンに生成」を再実行すれば、この画面もヒエラルキーに載る。
+        bool saved = preserveLayout;
+        preserveLayout = false;
+        var panel = MkPanelStretch(root, new Color(0.05f, 0.08f, 0.16f, 1f), "ResultPanel");
+        resultScreen = panel.gameObject;
+        var pt = panel.transform;
+        var card = MkPanel(pt, new Color(0.10f, 0.12f, 0.20f, 0.97f), 340, 100, 600, 520, "ResultCard");
+        resultTitleLabel = MkLabel(card.transform, "", 28, new Color(1f, 0.97f, 0.9f), 40, 28, 520, 44, TextAnchor.MiddleCenter, "ResultTitleLabel");
+        resultBodyLabel = MkLabel(card.transform, "", 17, new Color(0.95f, 0.96f, 1f), 40, 92, 520, 330, TextAnchor.UpperLeft, "ResultBodyLabel");
+        MkButton(card.transform, "🗺 マップに戻る", 18, 60, 444, 200, 48, () => { resultScreen.SetActive(false); ShowMap(); }, "ResultToMapButton");
+        MkButton(card.transform, "🔁 もう一周する", 18, 340, 444, 200, 48, () => { resultScreen.SetActive(false); EnterStage(J.GetStr(currentStage, "id")); }, "ResultRetryButton");
+        resultScreen.SetActive(false);
+        preserveLayout = saved;
+    }
+
     private void BuildTitleScreen()
     {
         var panel = MkPanelStretch(root, new Color(0.05f, 0.08f, 0.16f, 1f), "TitlePanel");
@@ -1322,9 +1383,27 @@ public class MainGame : MonoBehaviour
         // シーン生成時（v22）の「Prototype 2 v22 (Unity版)」のまま残ってしまう。
         // 戻り値の Text に直接テキストを入れて、実行中の版数を必ず表示する。
         // これで、タイトル画面右下の版数を見れば、どの版のコードで動いているか分かる。
-        var versionLabel = MkLabelA(pt, "Prototype 2 v30 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, 1, 0, TextAnchor.UpperRight, "VersionLabel");
-        versionLabel.text = "Prototype 2 v30 (Unity版)";
+        var versionLabel = MkLabelA(pt, "Prototype 2 v31 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, 1, 0, TextAnchor.UpperRight, "VersionLabel");
+        versionLabel.text = "Prototype 2 v31 (Unity版)";
         versionLabel.fontSize = 13;
+    }
+
+    private string StageDesc(Dictionary<string, object> s, Dictionary<string, object> ch)
+    {
+        string desc = J.GetStr(s, "name") + "：" + J.GetStr(s, "description") + "\n登場キャラ: " + J.GetStr(ch, "name") + "（" + J.GetStr(ch, "personality") + "）";
+        string cid = J.GetStr(ch, "id");
+        var phases = J.GetList(J.GetDict(stories, cid), "phases");
+        if (phases.Count > 0)
+        {
+            if (RouteDoneOf(cid) != "") desc += "\nルート完了（もう一周できます）";
+            else
+            {
+                var ph = PhaseById(phases, RoutePhaseOf(cid));
+                if (ph.Count == 0) ph = J.Dict(phases[0]);
+                desc += "\n進行中： " + J.GetStr(ph, "title");
+            }
+        }
+        return desc;
     }
 
     private Dictionary<string, object> CharForStage(string stageId)
@@ -1372,8 +1451,7 @@ public class MainGame : MonoBehaviour
                 brt.pivot = new Vector2(0.5f, 0.5f);
                 brt.anchoredPosition = new Vector2(ctr.x - 640f, 360f - ctr.y);
             }
-            string desc = J.GetStr(s, "name") + "：" + J.GetStr(s, "description") + "\n登場キャラ: " + J.GetStr(ch, "name") + "（" + J.GetStr(ch, "personality") + "）";
-            AddPointerEnter(b.gameObject, () => { mapInfoLabel.text = desc; });
+            AddPointerEnter(b.gameObject, () => { mapInfoLabel.text = StageDesc(s, ch); });
         }
         var info = MkPanelBottomBand(pt, new Color(0.05f, 0.06f, 0.12f, 0.82f), 72, "MapInfoBar");
         info.raycastTarget = false;
@@ -1388,6 +1466,7 @@ public class MainGame : MonoBehaviour
         screen = "title";
         titleScreen.SetActive(true);
         mapScreen.SetActive(false);
+        if (resultScreen != null) resultScreen.SetActive(false);
     }
 
     private void ShowMap()
@@ -1395,6 +1474,7 @@ public class MainGame : MonoBehaviour
         screen = "map";
         titleScreen.SetActive(false);
         mapScreen.SetActive(true);
+        if (resultScreen != null) resultScreen.SetActive(false);
     }
 
     private void EnterStage(string stageId)
@@ -1402,6 +1482,7 @@ public class MainGame : MonoBehaviour
         screen = "game";
         titleScreen.SetActive(false);
         mapScreen.SetActive(false);
+        if (resultScreen != null) resultScreen.SetActive(false);
         SelectStage(stageId);
     }
 
@@ -1479,9 +1560,116 @@ public class MainGame : MonoBehaviour
             RefreshCharPanel();
         }
         var story = J.GetDict(stories, cid);
+        var phases = J.GetList(story, "phases");
+        phaseMode = phases.Count > 0;
+        if (phaseMode)
+        {
+            // ルート完了済みなら第1章から新しい周回を始める（ステータスは保持）
+            if (RouteDoneOf(cid) != "") StartRouteRun(cid, phases);
+            var ph = PhaseById(phases, RoutePhaseOf(cid));
+            if (ph.Count == 0) ph = J.Dict(phases[0]);
+            StartPhase(ph);
+            return;
+        }
         beats = J.GetList(story, "beats");
         storyPos = 0;
         ShowBeat();
+    }
+
+    private string RoutePhaseOf(string cid)
+    {
+        string v;
+        return routePhase.TryGetValue(cid, out v) ? v : "";
+    }
+
+    private string RouteDoneOf(string cid)
+    {
+        string v;
+        return routeDone.TryGetValue(cid, out v) ? v : "";
+    }
+
+    private bool HasFlag(string cid, string flag)
+    {
+        HashSet<string> s;
+        return routeFlags.TryGetValue(cid, out s) && s.Contains(flag);
+    }
+
+    private void SetFlag(string cid, string flag)
+    {
+        HashSet<string> s;
+        if (!routeFlags.TryGetValue(cid, out s))
+        {
+            s = new HashSet<string>();
+            routeFlags[cid] = s;
+        }
+        s.Add(flag);
+    }
+
+    private Dictionary<string, object> PhaseById(List<object> phases, string pid)
+    {
+        foreach (var o in phases)
+        {
+            var d = J.Dict(o);
+            if (J.GetStr(d, "id") == pid) return d;
+        }
+        return new Dictionary<string, object>();
+    }
+
+    private void StartRouteRun(string cid, List<object> phases)
+    {
+        routeDone[cid] = "";
+        routePhase[cid] = J.GetStr(J.Dict(phases[0]), "id");
+        routeFlags[cid] = new HashSet<string>();
+        runAsks = 0;
+        runGreat = 0;
+        runGood = 0;
+        SaveAffection();
+    }
+
+    private void StartPhase(Dictionary<string, object> ph)
+    {
+        currentPhase = ph;
+        string cid = J.GetStr(currentChar, "id");
+        routePhase[cid] = J.GetStr(ph, "id");
+        ApplyBackground(J.GetStr(ph, "bg"));
+        var list = new List<object>();
+        string title = J.GetStr(ph, "title");
+        if (title != "")
+        {
+            var tb = new Dictionary<string, object>();
+            tb["type"] = "narration";
+            tb["text"] = "―― " + title + " ――";
+            list.Add(tb);
+        }
+        foreach (var b in J.GetList(ph, "beats")) list.Add(b);
+        beats = list;
+        storyPos = 0;
+        ShowBeat();
+    }
+
+    private void ApplyBackground(string bgId)
+    {
+        if (bgId == "") return;
+        string path;
+        if (!backgrounds.TryGetValue(bgId, out path) || path == "") return;
+        var tex = LoadTex(path);
+        if (tex == null) return;
+        SetCover(bgArt, tex);
+        bgArt.gameObject.SetActive(true);
+    }
+
+    private bool BeatConditionMet(Dictionary<string, object> beat)
+    {
+        var cond = J.GetDict(beat, "if");
+        if (cond.Count == 0) return true;
+        string cid = J.GetStr(currentChar, "id");
+        if (cond.ContainsKey("aff_min") && AffectionOf(cid) < J.GetInt(cond, "aff_min")) return false;
+        if (cond.ContainsKey("trust_min") && TrustOf(cid) < J.GetInt(cond, "trust_min")) return false;
+        string fl = J.GetStr(cond, "flag");
+        if (fl != "" && !HasFlag(cid, fl)) return false;
+        string nf = J.GetStr(cond, "not_flag");
+        if (nf != "" && HasFlag(cid, nf)) return false;
+        return true;
     }
 
     private void ResetAffection()
@@ -1492,9 +1680,12 @@ public class MainGame : MonoBehaviour
         foreach (var k in fkeys) fun[k] = 0;
         var tkeys = new List<string>(trust.Keys);
         foreach (var k in tkeys) trust[k] = 0;
+        routePhase.Clear();
+        routeFlags.Clear();
+        routeDone.Clear();
         SaveAffection();
         RefreshCharPanel();
-        mapInfoLabel.text = "好感度・面白さ・信頼度をリセットしました（全キャラクター 0）。地域をクリックでその地域へ出発します。";
+        mapInfoLabel.text = "好感度・面白さ・信頼度・ルート進行をリセットしました（全キャラクター）。地域をクリックでその地域へ出発します。";
     }
 
     private void SetSpeaker(bool isLine)
@@ -1524,11 +1715,21 @@ public class MainGame : MonoBehaviour
     {
         if (storyPos >= beats.Count)
         {
+            if (phaseMode) { PhaseEnd(); return; }
             StartStory();
             return;
         }
         var beat = J.Dict(beats[storyPos]);
         string btype = J.GetStr(beat, "type", "narration");
+        if (phaseMode)
+        {
+            // 条件を満たさない beat は読み飛ばす（ifルートの土台）
+            if (!BeatConditionMet(beat)) { storyPos++; ShowBeat(); return; }
+            string bgb = J.GetStr(beat, "bg");
+            if (bgb != "") ApplyBackground(bgb);
+            string sf = J.GetStr(beat, "set_flag");
+            if (sf != "") { SetFlag(J.GetStr(currentChar, "id"), sf); SaveAffection(); }
+        }
         phase = "story";
         ShowStoryBox();
         SetExpression("default");
@@ -1542,6 +1743,7 @@ public class MainGame : MonoBehaviour
                 ShowBeat();
                 return;
             }
+            activeBeat = beat;
             EnterAsk(q);
         }
         else if (btype == "ending")
@@ -1578,6 +1780,95 @@ public class MainGame : MonoBehaviour
         if (aff >= 40) return "fun";
         if (aff < 10) return "cry";
         return "default";
+    }
+
+    // フェーズの beats を使い切ったときの判定と遷移
+    private void PhaseEnd()
+    {
+        string cid = J.GetStr(currentChar, "id");
+        var story = J.GetDict(stories, cid);
+        var phases = J.GetList(story, "phases");
+        var clear = J.GetDict(currentPhase, "clear");
+        bool ok = true;
+        if (clear.ContainsKey("aff_min") && AffectionOf(cid) < J.GetInt(clear, "aff_min")) ok = false;
+        if (clear.ContainsKey("trust_min") && TrustOf(cid) < J.GetInt(clear, "trust_min")) ok = false;
+        string cf = J.GetStr(clear, "flag");
+        if (cf != "" && !HasFlag(cid, cf)) ok = false;
+        if (ok)
+        {
+            string next = J.GetStr(currentPhase, "next");
+            if (next != "")
+            {
+                var np = PhaseById(phases, next);
+                if (np.Count > 0) { SaveAffection(); StartPhase(np); return; }
+            }
+            // 最終フェーズ到達 = 結婚エンディング（好感度 80 以上で特別版）
+            FinishRoute(AffectionOf(cid) >= 80 ? "marriage_high" : "marriage");
+            return;
+        }
+        string fe = J.GetStr(currentPhase, "fail_ending");
+        if (fe != "") { FinishRoute(fe); return; }
+        // 条件未達: 同じフェーズをもう一周して関係を深める
+        LogLine("システム", "（まだ時が満ちていないようだ。もう少し関係を深めよう）");
+        StartPhase(currentPhase);
+    }
+
+    private void FinishRoute(string kind)
+    {
+        string cid = J.GetStr(currentChar, "id");
+        routeDone[cid] = kind;
+        SaveAffection();
+        pendingEnding = kind;
+        var endings = J.GetDict(J.GetDict(stories, cid), "endings");
+        SetSpeaker(false);
+        SetExpression(kind == "friends" ? "sad" : "fun");
+        ShowStoryBox();
+        ShowDialogue(J.GetStr(endings, kind), "");
+        nextButton.gameObject.SetActive(true);
+        phase = "route_ending";
+    }
+
+    private void ShowResult()
+    {
+        string cid = J.GetStr(currentChar, "id");
+        string kind = pendingEnding;
+        string title = kind == "friends" ? "友情エンディング" : (kind == "marriage_high" ? "結婚エンディング（特別）" : "結婚エンディング");
+        resultTitleLabel.text = "🏁 リザルト ― " + title;
+        int aff = AffectionOf(cid);
+        string level = "";
+        foreach (var o in affectionLevels)
+        {
+            var d = J.Dict(o);
+            if (aff >= J.GetInt(d, "min")) level = J.GetStr(d, "name");
+        }
+        var lines = new List<string>();
+        lines.Add("相手： " + J.GetStr(currentChar, "name") + "（" + J.GetStr(currentChar, "race") + "）");
+        lines.Add("到達フェーズ： " + J.GetStr(currentPhase, "title"));
+        lines.Add("");
+        lines.Add("♥ 好感度： " + aff + "（" + level + "）");
+        lines.Add("😊 面白さ： " + FunOf(cid));
+        lines.Add("🤝 信頼度： " + TrustOf(cid));
+        lines.Add("");
+        lines.Add("ルート中の回答： " + runAsks + " 回（great " + runGreat + " 回 / good " + runGood + " 回）");
+        var story = J.GetDict(stories, cid);
+        var labels = J.GetDict(story, "flag_labels");
+        var flines = new List<string>();
+        foreach (var kv in labels)
+            if (HasFlag(cid, kv.Key)) flines.Add("・" + J.GetStr(labels, kv.Key));
+        if (flines.Count > 0)
+        {
+            lines.Add("");
+            lines.Add("出来事：");
+            lines.AddRange(flines);
+        }
+        if (kind == "friends")
+        {
+            lines.Add("");
+            lines.Add("（ステータスは保持されます。もう一周して告白に再挑戦できます）");
+        }
+        resultBodyLabel.text = string.Join("\n", lines);
+        resultScreen.SetActive(true);
+        screen = "result";
     }
 
     private Dictionary<string, object> QuestionByIndex(int idx)
@@ -1624,6 +1915,7 @@ public class MainGame : MonoBehaviour
     private void OnNext()
     {
         if (phase == "ask") return;
+        if (phase == "route_ending") { ShowResult(); return; }
         storyPos++;
         ShowBeat();
     }
@@ -2188,6 +2480,16 @@ public class MainGame : MonoBehaviour
         else if (rkey == "terrible") trustDelta -= 2;
         trust[cid] = Mathf.Clamp(TrustOf(cid) + trustDelta, 0, 100);
         SaveAffection();
+        // フェーズ制: 質問に紐づくフラグ（評価が届いたときだけ）と、リザルト用のラン統計
+        if (phaseMode)
+        {
+            runAsks++;
+            if (key == "great") runGreat++;
+            else if (key == "good") runGood++;
+            string fog = J.GetStr(activeBeat, "flag_on_good");
+            bool reached = (key == "great" || key == "good") && !confused && !offtopic && !minimal;
+            if (fog != "" && reached) { SetFlag(cid, fog); SaveAffection(); }
+        }
         var reactions = J.GetList(J.GetDict(currentChar, "reactions"), rkey);
         string reaction = reactions.Count > 0 ? J.Str(reactions[turnCount % reactions.Count], "……") : "……";
         ShowStoryBox();
