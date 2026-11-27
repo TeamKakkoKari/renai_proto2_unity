@@ -1384,8 +1384,8 @@ public class MainGame : MonoBehaviour
         // シーン生成時（v22）の「Prototype 2 v22 (Unity版)」のまま残ってしまう。
         // 戻り値の Text に直接テキストを入れて、実行中の版数を必ず表示する。
         // これで、タイトル画面右下の版数を見れば、どの版のコードで動いているか分かる。
-        var versionLabel = MkLabelA(pt, "Prototype 2 v32 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, 1, 0, TextAnchor.UpperRight, "VersionLabel");
-        versionLabel.text = "Prototype 2 v32 (Unity版)";
+        var versionLabel = MkLabelA(pt, "Prototype 2 v33 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, 1, 0, TextAnchor.UpperRight, "VersionLabel");
+        versionLabel.text = "Prototype 2 v33 (Unity版)";
         versionLabel.fontSize = 13;
     }
 
@@ -1895,7 +1895,10 @@ public class MainGame : MonoBehaviour
         if (idx < 0 || idx >= qs.Count) return new Dictionary<string, object>();
         var q = J.Dict(qs[idx]);
         string cid = J.GetStr(currentChar, "id");
-        if (AffectionOf(cid) < J.GetInt(q, "min_affection", 0)) return new Dictionary<string, object>();
+        // min_affection が明記された質問だけを好感度で制限する。未指定の質問は
+        // 好感度がマイナスでも必ず出す（未指定=既定0のままだと、マイナス時に
+        // 全ての質問が消えて回復手段がなくなり、章が無限ループしていた）。
+        if (q.ContainsKey("min_affection") && AffectionOf(cid) < J.GetInt(q, "min_affection")) return new Dictionary<string, object>();
         return q;
     }
 
