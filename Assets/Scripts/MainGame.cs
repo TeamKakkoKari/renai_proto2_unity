@@ -56,6 +56,7 @@ public class MainGame : MonoBehaviour
     private int runGood = 0;
     private string pendingEnding = "";
     private string phaseIntroNote = "";
+    private int negPhaseEnds = 0;
     private string screen = "title"; // title | map | game
     private System.Random rng = new System.Random();
 
@@ -1384,8 +1385,8 @@ public class MainGame : MonoBehaviour
         // シーン生成時（v22）の「Prototype 2 v22 (Unity版)」のまま残ってしまう。
         // 戻り値の Text に直接テキストを入れて、実行中の版数を必ず表示する。
         // これで、タイトル画面右下の版数を見れば、どの版のコードで動いているか分かる。
-        var versionLabel = MkLabelA(pt, "Prototype 2 v33 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, 1, 0, TextAnchor.UpperRight, "VersionLabel");
-        versionLabel.text = "Prototype 2 v33 (Unity版)";
+        var versionLabel = MkLabelA(pt, "Prototype 2 v34 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, 1, 0, TextAnchor.UpperRight, "VersionLabel");
+        versionLabel.text = "Prototype 2 v34 (Unity版)";
         versionLabel.fontSize = 13;
     }
 
@@ -1621,7 +1622,7 @@ public class MainGame : MonoBehaviour
         routeDone[cid] = "";
         routePhase[cid] = J.GetStr(J.Dict(phases[0]), "id");
         routeFlags[cid] = new HashSet<string>();
-        runAsks = 0;
+        runAsks = 0; negPhaseEnds = 0;
         runGreat = 0;
         runGood = 0;
         SaveAffection();
@@ -1798,6 +1799,14 @@ public class MainGame : MonoBehaviour
         // 好感度が下限まで下がっていたら、章の判定より先に別れ（攻略失敗）で区切る。
         // マイナスのまま章をループし続けて先に進めなくなる状態を防ぐため。
         if (AffectionOf(cid) <= -20) { FinishRoute("breakup"); return; }
+        // マイナスのまま章末を2回続けて迎えたら、関係が続かず別れになる
+        // （1回だけなら章を繰り返して立て直す余地を残す）
+        if (AffectionOf(cid) < 0)
+        {
+            negPhaseEnds++;
+            if (negPhaseEnds >= 2) { FinishRoute("breakup"); return; }
+        }
+        else negPhaseEnds = 0;
         var story = J.GetDict(stories, cid);
         var phases = J.GetList(story, "phases");
         var clear = J.GetDict(currentPhase, "clear");

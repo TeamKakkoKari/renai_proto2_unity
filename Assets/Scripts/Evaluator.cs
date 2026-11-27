@@ -182,7 +182,11 @@ public static class Evaluator
         foreach (var c in cats) if (c == "ending") endingCount++;
         bool hasEnding = endingCount > 0;
         bool endingIsLast = hasEnding && cats[cats.Count - 1] == "ending";
-        if (endingCount >= 2) violations.Add("語尾が重なっている");
+        // 文末に連続する語尾（です＋ね、だ＋よ等）は1つの語尾として扱う。
+        // 「重なっている」のは、文の途中にも語尾が現れた場合だけとする
+        int trailEndings = 0;
+        for (int i = cats.Count - 1; i >= 0 && cats[i] == "ending"; i--) trailEndings++;
+        if (endingIsLast && endingCount - trailEndings > 0) violations.Add("語尾が重なっている");
         if (hasEnding && !endingIsLast) violations.Add("語尾は文の最後に置こう");
 
         // 文頭にあるべき言葉の位置
@@ -425,7 +429,11 @@ public static class Evaluator
         var pref = J.StrList(J.Get(character, "preferred_endings"));
         if (endingIsLast && pref.Count > 0)
         {
-            if (pref.Contains(texts[texts.Count - 1]))
+            // 文末の語尾列を連結して判定する（「です」＋「ね」で好みの「ですね」等）
+            var tailWords = new List<string>();
+            for (int i = texts.Count - 1; i >= 0 && cats[i] == "ending"; i--) tailWords.Insert(0, texts[i]);
+            string joinedEnding = string.Join("", tailWords);
+            if (pref.Contains(joinedEnding) || pref.Contains(texts[texts.Count - 1]))
             {
                 int v = J.GetInt(cfg, "personality_ending_match", 2);
                 score += v;
