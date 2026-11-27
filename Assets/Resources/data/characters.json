@@ -103,6 +103,9 @@
    "stage_id": "forest",
    "portrait": "res://assets/lilia_art.png",
    "blink": {
+    "default": [
+     ["res://assets/lilia_default_b0.png", "res://assets/lilia_default_b1.png", "res://assets/lilia_default_b2.png", "res://assets/lilia_default_b3.png", "res://assets/lilia_default_b4.png", "res://assets/lilia_default_b5.png"]
+    ],
     "neutral": [
      ["res://assets/lilia_neutral_b0.png", "res://assets/lilia_neutral_b1.png", "res://assets/lilia_neutral_b2.png", "res://assets/lilia_neutral_b3.png", "res://assets/lilia_neutral_b4.png", "res://assets/lilia_neutral_b5.png"],
      ["res://assets/lilia_neutral2_b0.png", "res://assets/lilia_neutral2_b1.png", "res://assets/lilia_neutral2_b2.png", "res://assets/lilia_neutral2_b3.png", "res://assets/lilia_neutral2_b4.png", "res://assets/lilia_neutral2_b5.png"]
