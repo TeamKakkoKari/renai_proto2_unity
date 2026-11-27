@@ -55,6 +55,7 @@ public class MainGame : MonoBehaviour
     private int runGreat = 0;
     private int runGood = 0;
     private string pendingEnding = "";
+    private string phaseIntroNote = "";
     private string screen = "title"; // title | map | game
     private System.Random rng = new System.Random();
 
@@ -1383,8 +1384,8 @@ public class MainGame : MonoBehaviour
         // シーン生成時（v22）の「Prototype 2 v22 (Unity版)」のまま残ってしまう。
         // 戻り値の Text に直接テキストを入れて、実行中の版数を必ず表示する。
         // これで、タイトル画面右下の版数を見れば、どの版のコードで動いているか分かる。
-        var versionLabel = MkLabelA(pt, "Prototype 2 v31 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, 1, 0, TextAnchor.UpperRight, "VersionLabel");
-        versionLabel.text = "Prototype 2 v31 (Unity版)";
+        var versionLabel = MkLabelA(pt, "Prototype 2 v32 (Unity版)", 13, new Color(1, 1, 1, 0.6f), 1080, 688, 184, 20, 1, 0, TextAnchor.UpperRight, "VersionLabel");
+        versionLabel.text = "Prototype 2 v32 (Unity版)";
         versionLabel.fontSize = 13;
     }
 
@@ -1641,6 +1642,14 @@ public class MainGame : MonoBehaviour
             tb["text"] = "―― " + title + " ――";
             list.Add(tb);
         }
+        if (phaseIntroNote != "")
+        {
+            var nb = new Dictionary<string, object>();
+            nb["type"] = "narration";
+            nb["text"] = phaseIntroNote;
+            list.Add(nb);
+            phaseIntroNote = "";
+        }
         foreach (var b in J.GetList(ph, "beats")) list.Add(b);
         beats = list;
         storyPos = 0;
@@ -1786,6 +1795,9 @@ public class MainGame : MonoBehaviour
     private void PhaseEnd()
     {
         string cid = J.GetStr(currentChar, "id");
+        // 好感度が下限まで下がっていたら、章の判定より先に別れ（攻略失敗）で区切る。
+        // マイナスのまま章をループし続けて先に進めなくなる状態を防ぐため。
+        if (AffectionOf(cid) <= -20) { FinishRoute("breakup"); return; }
         var story = J.GetDict(stories, cid);
         var phases = J.GetList(story, "phases");
         var clear = J.GetDict(currentPhase, "clear");
@@ -1810,6 +1822,7 @@ public class MainGame : MonoBehaviour
         if (fe != "") { FinishRoute(fe); return; }
         // 条件未達: 同じフェーズをもう一周して関係を深める
         LogLine("システム", "（まだ時が満ちていないようだ。もう少し関係を深めよう）");
+        phaseIntroNote = "（まだ心の距離があるようだ。彼女の好きな話題を、丁寧な言葉で話してみよう）";
         StartPhase(currentPhase);
     }
 
@@ -1821,7 +1834,7 @@ public class MainGame : MonoBehaviour
         pendingEnding = kind;
         var endings = J.GetDict(J.GetDict(stories, cid), "endings");
         SetSpeaker(false);
-        SetExpression(kind == "friends" ? "sad" : "fun");
+        SetExpression(kind == "friends" ? "sad" : (kind == "breakup" ? "cry" : "fun"));
         ShowStoryBox();
         ShowDialogue(J.GetStr(endings, kind), "");
         nextButton.gameObject.SetActive(true);
@@ -1832,7 +1845,7 @@ public class MainGame : MonoBehaviour
     {
         string cid = J.GetStr(currentChar, "id");
         string kind = pendingEnding;
-        string title = kind == "friends" ? "友情エンディング" : (kind == "marriage_high" ? "結婚エンディング（特別）" : "結婚エンディング");
+        string title = kind == "friends" ? "友情エンディング" : (kind == "breakup" ? "攻略失敗 ― 別れ" : (kind == "marriage_high" ? "結婚エンディング（特別）" : "結婚エンディング"));
         resultTitleLabel.text = "🏁 リザルト ― " + title;
         int aff = AffectionOf(cid);
         string level = "";
@@ -1865,6 +1878,11 @@ public class MainGame : MonoBehaviour
         {
             lines.Add("");
             lines.Add("（ステータスは保持されます。もう一周して告白に再挑戦できます）");
+        }
+        if (kind == "breakup")
+        {
+            lines.Add("");
+            lines.Add("（好感度が下がりきってしまった。彼女の好きな話題と丁寧な言葉を心がけて、もう一周してみよう）");
         }
         resultBodyLabel.text = string.Join("\n", lines);
         resultScreen.SetActive(true);
